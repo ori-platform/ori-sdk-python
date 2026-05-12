@@ -62,7 +62,8 @@ class RuntimeHealthClient:
             ) from exc
         if not isinstance(decoded, dict):
             raise HealthClientError(
-                "invalid health response: expected JSON object", code=ORI_SDK_INVALID_JSON
+                "invalid health response: expected JSON object",
+                code=ORI_SDK_INVALID_JSON,
             )
         try:
             return HealthResponse.from_dict(decoded)
@@ -97,11 +98,13 @@ class RuntimeHealthClient:
             ) from exc
         except FileNotFoundError as exc:
             raise HealthClientError(
-                f"health socket not found at {self._path}", code=ORI_SDK_SOCKET_NOT_FOUND
+                f"health socket not found at {self._path}",
+                code=ORI_SDK_SOCKET_NOT_FOUND,
             ) from exc
         except ConnectionRefusedError as exc:
             raise HealthClientError(
-                f"health socket refused connection at {self._path}", code=ORI_SDK_CONNECTION_REFUSED
+                f"health socket refused connection at {self._path}",
+                code=ORI_SDK_CONNECTION_REFUSED,
             ) from exc
         except OSError as exc:
             raise HealthClientError(
@@ -109,7 +112,9 @@ class RuntimeHealthClient:
             ) from exc
 
         if not buf:
-            raise HealthClientError("empty health response payload", code=ORI_SDK_EMPTY_RESPONSE)
+            raise HealthClientError(
+                "empty health response payload", code=ORI_SDK_EMPTY_RESPONSE
+            )
         return bytes(buf)
 
     async def _arequest(self, message: str) -> bytes:
@@ -142,11 +147,13 @@ class RuntimeHealthClient:
             ) from exc
         except FileNotFoundError as exc:
             raise HealthClientError(
-                f"health socket not found at {self._path}", code=ORI_SDK_SOCKET_NOT_FOUND
+                f"health socket not found at {self._path}",
+                code=ORI_SDK_SOCKET_NOT_FOUND,
             ) from exc
         except ConnectionRefusedError as exc:
             raise HealthClientError(
-                f"health socket refused connection at {self._path}", code=ORI_SDK_CONNECTION_REFUSED
+                f"health socket refused connection at {self._path}",
+                code=ORI_SDK_CONNECTION_REFUSED,
             ) from exc
         except OSError as exc:
             raise HealthClientError(
@@ -154,5 +161,7 @@ class RuntimeHealthClient:
             ) from exc
 
         if not buf:
-            raise HealthClientError("empty health response payload", code=ORI_SDK_EMPTY_RESPONSE)
+            raise HealthClientError(
+                "empty health response payload", code=ORI_SDK_EMPTY_RESPONSE
+            )
         return bytes(buf)

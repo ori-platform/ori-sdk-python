@@ -38,7 +38,9 @@ def test_health_client_error_connection_refused_code() -> None:
 
 
 def test_skill_metadata_validation_error_is_ori_sdk_error() -> None:
-    exc = SkillMetadataValidationError("name is required", code=ORI_SDK_SKILL_VALIDATION)
+    exc = SkillMetadataValidationError(
+        "name is required", code=ORI_SDK_SKILL_VALIDATION
+    )
     assert isinstance(exc, OriSDKError)
     assert exc.code == ORI_SDK_SKILL_VALIDATION
 

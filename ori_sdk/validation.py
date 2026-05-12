@@ -82,11 +82,13 @@ def validate_skill_metadata(skill: object) -> Mapping[str, object]:
         trigger_name = _require_string(trigger.get("name"), "triggers[].name")
         if not TRIGGER_NAME_RE.fullmatch(trigger_name):
             raise SkillMetadataValidationError(
-                f"trigger {trigger_name!r} has invalid name format", code=ORI_SDK_SKILL_VALIDATION
+                f"trigger {trigger_name!r} has invalid name format",
+                code=ORI_SDK_SKILL_VALIDATION,
             )
         if trigger_name in seen_names:
             raise SkillMetadataValidationError(
-                f"duplicate trigger name {trigger_name!r}", code=ORI_SDK_SKILL_VALIDATION
+                f"duplicate trigger name {trigger_name!r}",
+                code=ORI_SDK_SKILL_VALIDATION,
             )
         seen_names.add(trigger_name)
         trigger_names.append(trigger_name)
@@ -149,11 +151,13 @@ def validate_skill_metadata(skill: object) -> Mapping[str, object]:
         actions_for_trigger = defaults.get(trigger_name)
         if not isinstance(actions_for_trigger, list):
             raise SkillMetadataValidationError(
-                f"actions.defaults.{trigger_name} must be an array", code=ORI_SDK_SKILL_VALIDATION
+                f"actions.defaults.{trigger_name} must be an array",
+                code=ORI_SDK_SKILL_VALIDATION,
             )
         if not actions_for_trigger:
             raise SkillMetadataValidationError(
-                f"actions.defaults.{trigger_name} must not be empty", code=ORI_SDK_SKILL_VALIDATION
+                f"actions.defaults.{trigger_name} must not be empty",
+                code=ORI_SDK_SKILL_VALIDATION,
             )
         for action_name in actions_for_trigger:
             if not isinstance(action_name, str) or not action_name.strip():
