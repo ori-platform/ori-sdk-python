@@ -1,0 +1,8 @@
+{
+  "schema_version": 1,
+  "ok": false,
+  "error": {
+    "code": "unsupported_request",
+    "detail": "send GET_HEALTH or empty request"
+  }
+}

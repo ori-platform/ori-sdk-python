@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "health": {
+    "device_id": "site-a",
+    "uptime_s": 12.5,
+    "health_socket_path": "/run/ori/health.sock",
+    "capability_posture": {
+      "available": true,
+      "sms_available": true,
+      "whatsapp_available": false,
+      "gateway_reachable": false,
+      "local_slm_loaded": true,
+      "relay_connected": true,
+      "internet_available": true,
+      "checked_at_ms": 1,
+      "expires_at_ms": 2,
+      "gateway_last_heartbeat_ms": null
+    },
+    "sensors": [
+      {
+        "id": "mains-current",
+        "type": "current_clamp",
+        "protocol": "i2c",
+        "poll_interval_ms": 1000,
+        "connected": true,
+        "last_seen_ms": 100,
+        "stale": false
+      }
+    ],
+    "last_alert_timestamps": {
+      "by_channel": {
+        "sms": 123
+      },
+      "by_trigger": {
+        "dangerous_overcurrent": 123
+      }
+    },
+    "device_policy": {
+      "available": true,
+      "enabled": true,
+      "policy_version": 1,
+      "tier": "B",
+      "relay_b_enabled": true,
+      "relay_c_enabled": false,
+      "cloud_llm_enabled": true,
+      "valid_until": 9999999999,
+      "issued_at": 1000000000,
+      "is_expired": false
+    }
+  }
+}
