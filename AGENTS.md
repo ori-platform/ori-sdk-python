@@ -7,23 +7,23 @@ This repository ships shared SDK contracts for Ori companion repos.
 `ori-sdk-python` exists to prevent cross-repo protocol drift by providing:
 
 - typed contract models,
-- runtime health socket clients,
+- [runtime](https://github.com/ori-platform/ori-runtime) health socket clients,
 - skill metadata validation helpers.
 
-It is not the runtime, does not execute hooks, and does not control hardware.
+It is not [`ori-runtime`](https://github.com/ori-platform/ori-runtime), does not execute hooks, and does not control hardware.
 
 ## Invariants
 
 1. `SDK-1` Contract fidelity is absolute.
-If a field exists in `ori-specs`, it exists in SDK models. If it does not exist
-in specs, it must not be introduced in models.
+If a field exists in [`ori-specs`](https://github.com/ori-platform/ori-specs), it exists in SDK models. If it does not exist
+in [`ori-specs`](https://github.com/ori-platform/ori-specs), it must not be introduced in models.
 
 2. `SDK-2` Health client errors are typed and graceful.
 Connection failures (including connection refused / missing socket / timeout)
 must raise `HealthClientError`, never leak raw transport exceptions.
 
-3. `SDK-3` Validation mirrors runtime semantics.
-Skill metadata validation must enforce the same invariant set as runtime
+3. `SDK-3` Validation mirrors [`ori-runtime`](https://github.com/ori-platform/ori-runtime) semantics.
+Skill metadata validation must enforce the same invariant set as [`ori-runtime`](https://github.com/ori-platform/ori-runtime)
 `SkillLoader` for supported bootstrap rules.
 
 4. `SDK-4` No hidden network behavior.
@@ -39,8 +39,8 @@ Gateway utilities must preserve `request_id` end-to-end. Builders and parsers
 must not regenerate IDs during response handling.
 
 7. `SDK-7` Runtime decoupling.
-SDK must not import from `ori-runtime` directly. Contracts come from
-`ori-specs` and explicit mirrored types.
+SDK must not import from [`ori-runtime`](https://github.com/ori-platform/ori-runtime) directly. Contracts come from
+[`ori-specs`](https://github.com/ori-platform/ori-specs) and explicit mirrored types.
 
 ## Layout
 

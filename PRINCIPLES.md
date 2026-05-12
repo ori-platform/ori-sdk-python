@@ -1,8 +1,8 @@
 # Ori Design Principles
 
 This repository is part of the Ori platform. Every design decision must survive
-the eight lenses below. Principles 1-7 are inherited from runtime
-(`ori-platform/ori`). Principle 8 governs cross-repo integration.
+the eight lenses below. Principles 1-7 are inherited from
+[`ori-runtime` PRINCIPLES.md](https://github.com/ori-platform/ori-runtime/blob/main/PRINCIPLES.md). Principle 8 governs cross-repo integration.
 
 ## 1. Actuation Trust
 
@@ -34,7 +34,7 @@ Learning improves reasoning, never grants permissions.
 
 ## 8. Contract Fidelity
 
-Consume runtime contracts. Never reinvent them.
+Consume [`ori-runtime`](https://github.com/ori-platform/ori-runtime) and [`ori-specs`](https://github.com/ori-platform/ori-specs) contracts. Never reinvent them.
 
 Repo-specific note:
 `ori-sdk-python` is the typed contract bridge for CLI, gateway, skills hub,

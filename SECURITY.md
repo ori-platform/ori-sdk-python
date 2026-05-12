@@ -2,7 +2,7 @@
 
 `ori-sdk-python` is a contract and tooling library for the Ori platform. It does
 not control hardware directly, but security issues here can still affect skill
-verification, CLI installs, Gateway integration, and runtime diagnostics.
+verification, CLI installs, Gateway integration, and [runtime](https://github.com/ori-platform/ori-runtime) diagnostics.
 
 ## Supported Versions
 
@@ -28,7 +28,7 @@ Please include:
 
 - Affected component and file paths
 - Reproduction steps
-- Impact on contract fidelity, signing, validation, or runtime integration
+- Impact on contract fidelity, signing, validation, or [runtime](https://github.com/ori-platform/ori-runtime) integration
 - Whether a malicious skill package could be accepted or installed
 - Suggested remediation, if available
 
@@ -56,8 +56,8 @@ Highest-priority findings include:
 - Accepting malformed or unsigned community skill packages
 - Extracting or writing skill artifacts before verification
 - Gateway request/response correlation failures
-- Health client behavior that hides runtime failures from CLI/operator tooling
-- Schema drift that weakens runtime action-tier or skill validation invariants
+- Health client behavior that hides [`ori-runtime`](https://github.com/ori-platform/ori-runtime) failures from CLI/operator tooling
+- Schema drift that weakens [runtime](https://github.com/ori-platform/ori-runtime) action-tier or skill validation invariants
 - Secrets exposure in tests, fixtures, config, or logs
 
 ## Safe Harbor

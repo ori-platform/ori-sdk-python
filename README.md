@@ -1,14 +1,14 @@
 # ori-sdk-python
 
-Python SDK for Ori runtime integrations and community skill tooling.
+Python SDK for [Ori runtime](https://github.com/ori-platform/ori-runtime) integrations and community skill tooling.
 
 ## Scope (bootstrap)
 
 This repository intentionally ships a thin, stable v1 bootstrap surface:
 
-- Typed models for `runtime-health/v1` and `gateway-api/v1` contracts.
-- Local Unix-socket runtime health client (sync + async).
-- Skill metadata validation helpers aligned with runtime loader invariants.
+- Typed models for [`runtime-health/v1`](https://github.com/ori-platform/ori-specs/blob/main/runtime-health/v1.md) and [`gateway-api/v1`](https://github.com/ori-platform/ori-specs/blob/main/gateway-api/v1.md) contracts.
+- Local Unix-socket [`ori-runtime`](https://github.com/ori-platform/ori-runtime) health client (sync + async).
+- Skill metadata validation helpers aligned with [runtime](https://github.com/ori-platform/ori-runtime) loader invariants.
 - Gateway topic + request/response helper utilities with `request_id` integrity.
 
 Out of scope for this bootstrap:
@@ -59,9 +59,9 @@ validate_skill_metadata_file(Path("skills/my-skill/skill.yaml"))
 
 | SDK version | Runtime baseline | Specs baseline |
 |---|---|---|
-| `0.1.x` | `v0.9.0-beta.2+` | `ori-specs v1` |
+| `0.1.x` | [`ori-runtime`](https://github.com/ori-platform/ori-runtime) `v0.9.0-beta.2+` | [`ori-specs`](https://github.com/ori-platform/ori-specs) `v1` |
 
-The SDK mirrors contracts from `ori-specs` and must not import from runtime internals.
+The SDK mirrors contracts from [`ori-specs`](https://github.com/ori-platform/ori-specs) and must not import from [`ori-runtime`](https://github.com/ori-platform/ori-runtime) internals.
 
 ## License
 
