@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ori-sdk-python"
+version = "0.1.0"
+description = "Python SDK for Ori runtime health and skill metadata tooling."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Ori Nexus Systems LTD" }]
+dependencies = ["PyYAML>=6.0.1,<7"]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3,<9",
+    "mypy>=1.11,<2",
+    "ruff>=0.6,<1",
+    "pre-commit>=3.7,<4",
+]
+
+[tool.setuptools.packages.find]
+include = ["ori_sdk*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+disallow_any_generics = true
+disallow_subclassing_any = true
+no_implicit_optional = true
+check_untyped_defs = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["yaml"]
+ignore_missing_imports = true
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W"]
+ignore = ["E501"]
