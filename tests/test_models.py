@@ -27,6 +27,16 @@ def test_gateway_reasoning_response_from_dict() -> None:
     payload = json.loads((FIXTURES / "gateway_reasoning_response.json").read_text())
     parsed = GatewayReasoningResponse.from_dict(payload)
     assert parsed.action_tier == "D"
+    assert parsed.error is None
+    assert parsed.to_dict() == payload
+
+
+def test_gateway_reasoning_error_response_from_dict() -> None:
+    payload = json.loads(
+        (FIXTURES / "gateway_reasoning_error_response.json").read_text()
+    )
+    parsed = GatewayReasoningResponse.from_dict(payload)
+    assert parsed.error == "provider timeout"
     assert parsed.to_dict() == payload
 
 

@@ -25,8 +25,8 @@ FIXTURES = Path(__file__).parent / "fixtures"
 
 
 def test_gateway_topics_include_device_id() -> None:
-    assert gateway_request_topic("site-a") == "ori/gateway/site-a/reason/request"
-    assert gateway_response_topic("site-a") == "ori/gateway/site-a/reason/response"
+    assert gateway_request_topic("site-a") == "ori/site-a/reasoning/request"
+    assert gateway_response_topic("site-a") == "ori/site-a/reasoning/response"
     assert GATEWAY_HEALTH_TOPIC == "ori/gateway/health"
 
 
@@ -125,3 +125,26 @@ def test_validate_response_raises_on_mismatched_request_id() -> None:
     resp = parse_gateway_reasoning_response(resp_payload)
     with pytest.raises(GatewayContractError, match="does not match"):
         validate_response(req, resp)
+
+
+def test_gateway_error_response_correlation() -> None:
+    req_payload = json.loads((FIXTURES / "gateway_reasoning_request.json").read_text())
+    resp_payload = json.loads(
+        (FIXTURES / "gateway_reasoning_error_response.json").read_text()
+    )
+    request = build_gateway_reasoning_request(
+        request_id=str(req_payload["request_id"]),
+        device_id=str(req_payload["device_id"]),
+        sensor_type=str(req_payload["sensor_type"]),
+        trigger_name=str(req_payload["trigger_name"]),
+        prompt=str(req_payload["prompt"]),
+        context_value=float(req_payload["context"]["value"]),
+        context_unit=str(req_payload["context"]["unit"]),
+        context_timestamp=int(req_payload["context"]["timestamp"]),
+        context_history=list(req_payload["context"]["history"]),
+        action_tier_hint=str(req_payload["action_tier_hint"]),
+        timeout_ms=int(req_payload["timeout_ms"]),
+    )
+    response = parse_gateway_reasoning_response(resp_payload)
+    assert response.error == "provider timeout"
+    validate_response(request, response)

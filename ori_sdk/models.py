@@ -479,12 +479,16 @@ class GatewayReasoningResponse:
     confidence: float
     action_tier: str
     proposed_action: str | None
+    error: str | None = None
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> GatewayReasoningResponse:
         proposed_raw = payload.get("proposed_action")
         if proposed_raw is not None and not isinstance(proposed_raw, str):
             raise ValueError("proposed_action must be string or null")
+        error_raw = payload.get("error")
+        if error_raw is not None and not isinstance(error_raw, str):
+            raise ValueError("error must be string or omitted")
         return cls(
             request_id=_as_str(payload.get("request_id"), "request_id"),
             text=_as_str(payload.get("text"), "text"),
@@ -494,10 +498,11 @@ class GatewayReasoningResponse:
             confidence=_as_float(payload.get("confidence"), "confidence"),
             action_tier=_as_action_tier(payload.get("action_tier"), "action_tier"),
             proposed_action=proposed_raw,
+            error=error_raw,
         )
 
     def to_dict(self) -> dict[str, object]:
-        return {
+        result: dict[str, object] = {
             "request_id": self.request_id,
             "text": self.text,
             "model": self.model,
@@ -507,3 +512,6 @@ class GatewayReasoningResponse:
             "action_tier": self.action_tier,
             "proposed_action": self.proposed_action,
         }
+        if self.error is not None:
+            result["error"] = self.error
+        return result

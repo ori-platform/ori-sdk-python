@@ -18,14 +18,14 @@ def gateway_request_topic(device_id: str) -> str:
     device = device_id.strip()
     if not device:
         raise ValueError("device_id must not be empty")
-    return f"ori/gateway/{device}/reason/request"
+    return f"ori/{device}/reasoning/request"
 
 
 def gateway_response_topic(device_id: str) -> str:
     device = device_id.strip()
     if not device:
         raise ValueError("device_id must not be empty")
-    return f"ori/gateway/{device}/reason/response"
+    return f"ori/{device}/reasoning/response"
 
 
 def new_request_id() -> str:
