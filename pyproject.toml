@@ -18,6 +18,8 @@ dev = [
     "mypy>=1.11,<2",
     "ruff>=0.6,<1",
     "pre-commit>=3.7,<4",
+    "pip-audit>=2.7",
+    "cyclonedx-bom>=4.0",
 ]
 
 [tool.setuptools.packages.find]
