@@ -62,3 +62,51 @@ pre-commit run --all-files
 pytest -q
 mypy ori_sdk
 ```
+
+---
+
+## Supply Chain Security Invariants
+
+These rules apply to every AI coding agent modifying this repository. Violating
+these rules can compromise the SDK that is embedded in systems controlling physical hardware.
+
+1. Never add `pull_request_target` workflows that checkout or execute untrusted
+   PR code. Use `pull_request` for fork PR workflows.
+
+2. Every GitHub Actions workflow must declare explicit least-privilege
+   permissions. Normal CI uses `contents: read` and `id-token: none`.
+
+3. `id-token: write` is allowed only in a dedicated release job in `release.yml`.
+   It must never appear in `ci.yml`.
+
+4. Release jobs must never restore dependency caches (`actions/cache`, package
+   manager caches, or setup action cache flags). Cache poisoning was a key part
+   of the TanStack May 2026 supply-chain attack.
+
+5. GitHub Actions must be pinned to full commit SHAs. Mutable tags such as
+   `@v4`, `@v5`, `@main`, and `@master` are forbidden. Add a human-readable
+   version comment next to each SHA.
+
+6. Never download and execute remote scripts in CI without hash or signature
+   verification. `curl URL | bash` and equivalent patterns are forbidden.
+
+7. Python installs in CI must use hash-locked requirements files with
+   `--require-hashes`. Do not use `pip install -e '.[dev]'` to resolve
+   dependencies in CI.
+
+8. Device deployment must install from signed artifacts or a signed wheelhouse.
+   Production deployment must not resolve dependencies live from public registries.
+
+9. Valid provenance does not imply safe code. The TanStack May 2026 incident
+   produced malicious packages through legitimate CI/OIDC pathways. For Ori,
+   Tier C/D skill review gates and runtime sandboxing remain mandatory
+   regardless of provenance or author reputation.
+
+10. Run `scripts/check_workflows.py` before merging workflow or pre-commit
+    configuration changes. The script fails on `pull_request_target`, mutable
+    action refs, unauthorized `id-token: write`, remote script execution
+    patterns, and remote pre-commit hooks not pinned to full commit SHAs.
+
+11. Ed25519 signing implementations that must interoperate with the runtime use
+    `cryptography`, not PyNaCl. Alignment with ori-skills-hub and ori-runtime is
+    required — all three repos use `cryptography` for Ed25519 operations.
