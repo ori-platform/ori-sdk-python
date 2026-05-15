@@ -12,19 +12,28 @@ from ori_sdk.errors import ORI_SDK_REQUEST_ID_MISMATCH, GatewayContractError
 from ori_sdk.models import GatewayReasoningRequest, GatewayReasoningResponse
 
 GATEWAY_HEALTH_TOPIC = "ori/gateway/health"
+GATEWAY_REASONING_REQUEST_TOPIC_FILTER = "ori/+/reasoning/request"
+
+
+def _validate_mqtt_device_id(device_id: str) -> str:
+    if not device_id:
+        raise ValueError("device_id must not be empty")
+    if device_id.strip() != device_id:
+        raise ValueError("device_id must not contain leading or trailing whitespace")
+    if any(char in device_id for char in "/+#"):
+        raise ValueError(
+            "device_id must not contain MQTT topic separators or wildcards"
+        )
+    return device_id
 
 
 def gateway_request_topic(device_id: str) -> str:
-    device = device_id.strip()
-    if not device:
-        raise ValueError("device_id must not be empty")
+    device = _validate_mqtt_device_id(device_id)
     return f"ori/{device}/reasoning/request"
 
 
 def gateway_response_topic(device_id: str) -> str:
-    device = device_id.strip()
-    if not device:
-        raise ValueError("device_id must not be empty")
+    device = _validate_mqtt_device_id(device_id)
     return f"ori/{device}/reasoning/response"
 
 

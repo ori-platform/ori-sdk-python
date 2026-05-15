@@ -12,12 +12,12 @@ from ori_sdk.helpers import (
     posture_interpretation,
     staleness_summary,
 )
-from ori_sdk.models import HealthResponse
+from ori_sdk.models import HealthResponse, HealthStatus
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
 
-def _load_health_status():  # type: ignore[return]
+def _load_health_status() -> HealthStatus:
     payload = json.loads((FIXTURES / "runtime_health_success.json").read_text())
     resp = HealthResponse.from_dict(payload)
     assert resp.health is not None
