@@ -1,0 +1,148 @@
+name: "Implementation Issue"
+description: "Implementation task from the Ori SDK Python Implementation Reference"
+title: "[SDK-NNN] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > Every issue must have clear acceptance criteria, explicit dependencies, and enough context
+        > that a contributor who has never seen the codebase can deliver against it.
+        > Keep this issue scoped to the repository contract below.
+
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: "Why this work exists. Link to the implementation reference section and the architectural purpose."
+      placeholder: |
+        One paragraph. A contributor who reads only this should understand the "why."
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: "What this issue delivers. Be specific about files, packages, and interfaces."
+      placeholder: |
+        - [ ] Python module under `ori_sdk/` to create or modify
+        - [ ] Public dataclass/helper/API to expose from `ori_sdk.__init__` if needed
+        - [ ] Contract fixture under `tests/fixtures/` if schema-facing
+        - [ ] Tests under `tests/`
+    validations:
+      required: true
+
+  - type: textarea
+    id: non-goals
+    attributes:
+      label: Non-Goals
+      description: "What this issue explicitly does NOT do. Prevents scope creep."
+      placeholder: |
+        - This issue does not implement unrelated repo work.
+        - This issue does not change cross-repo contracts unless explicitly labelled contract-change.
+    validations:
+      required: true
+
+  - type: textarea
+    id: technical-spec
+    attributes:
+      label: Technical Specification
+      description: "Code signatures, data types, algorithms, error handling. Enough detail to implement without guessing."
+      placeholder: |
+        ```python
+        from dataclasses import dataclass
+
+        @dataclass(frozen=True)
+        class SkillPackage:
+            name: str
+            version: str
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: "Checkboxes. Every one must be checked before the PR is merged."
+      placeholder: |
+        - [ ] Public API is typed and documented
+        - [ ] Contract fixtures round-trip where applicable
+        - [ ] `pytest` passes
+        - [ ] `mypy` strict passes
+        - [ ] `ruff check` and `ruff format --check` pass
+    validations:
+      required: true
+
+  - type: textarea
+    id: tests
+    attributes:
+      label: Tests Required
+      description: "Specific test names and what each verifies."
+      placeholder: |
+        | Test | Verifies |
+        |------|----------|
+        | `test_<module>_happy_path` | Expected typed contract behavior |
+        | `test_<module>_rejects_invalid_input` | Bad input is rejected deterministically |
+    validations:
+      required: true
+
+  - type: textarea
+    id: invariants
+    attributes:
+      label: "Invariants — Do Not Violate"
+      description: "Copy the specific AGENTS.md invariants that apply to this issue."
+      placeholder: |
+        - SDK mirrors `ori-specs` and runtime contracts; it must not redefine them.
+        - Security-sensitive Ed25519 work uses `cryptography`, not PyNaCl, for runtime interoperability.
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: "What blocks this issue and what it unblocks."
+      placeholder: |
+        **Blocked by:**
+        - #NN — short title
+
+        **Unblocks:**
+        - #MM — short title
+    validations:
+      required: true
+
+  - type: textarea
+    id: references
+    attributes:
+      label: Contract References
+      description: "Links to specs, implementation references, runtime code, or SDK contract files relevant to this repo."
+      placeholder: |
+        - `ori-specs/skill-package/v1.md` — skill package schema, when relevant
+        - `ori-specs/signing/v1.md` — Ed25519 signing, when relevant
+        - `ori-specs/gateway-api/v1.md` — gateway request/response contracts, when relevant
+        - SDK Phase 2 Implementation Reference section for this issue
+        - Runtime v0.9.0-beta.2 contract files when mirroring runtime behavior
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - "poc-critical"
+        - "post-poc"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: labels-check
+    attributes:
+      label: Additional Labels
+      options:
+        - label: "contract-change — modifies cross-repo contract"
+        - label: "runtime-impact — requires follow-up PR in ori-runtime"
+        - label: "security-sensitive — touches signing, tokens, keypairs, Tier C/D, or device credentials"
