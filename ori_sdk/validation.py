@@ -187,3 +187,11 @@ def validate_skill_metadata(skill: object) -> Mapping[str, object]:
                 )
 
     return root
+
+
+__all__ = [
+    "MAX_HISTORY_PLACEHOLDERS",
+    "SkillMetadataValidationError",
+    "validate_skill_metadata",
+    "validate_skill_metadata_file",
+]

@@ -7,6 +7,7 @@ import asyncio
 import json
 import socket
 from pathlib import Path
+from types import TracebackType
 
 import pytest
 
@@ -39,7 +40,12 @@ class _FakeSocket:
     def __enter__(self) -> _FakeSocket:
         return self
 
-    def __exit__(self, exc_type, exc, tb) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        tb: TracebackType | None,
+    ) -> None:
         return None
 
 
@@ -49,7 +55,7 @@ def test_get_health_parses_success_payload(monkeypatch: pytest.MonkeyPatch) -> N
     monkeypatch.setattr(
         socket,
         "socket",
-        lambda *args, **kwargs: _FakeSocket([raw]),  # type: ignore[return-value]
+        lambda *args, **kwargs: _FakeSocket([raw]),
     )
 
     response = RuntimeHealthClient("/tmp/ori-health.sock").get_health()
@@ -66,7 +72,7 @@ def test_get_health_parses_error_payload(monkeypatch: pytest.MonkeyPatch) -> Non
     monkeypatch.setattr(
         socket,
         "socket",
-        lambda *args, **kwargs: _FakeSocket([raw]),  # type: ignore[return-value]
+        lambda *args, **kwargs: _FakeSocket([raw]),
     )
 
     response = RuntimeHealthClient("/tmp/ori-health.sock").get_health()
@@ -89,7 +95,7 @@ def test_get_health_handles_connection_refused(
     monkeypatch.setattr(
         socket,
         "socket",
-        lambda *args, **kwargs: _RefusingSocket(),  # type: ignore[return-value]
+        lambda *args, **kwargs: _RefusingSocket(),
     )
 
     client = RuntimeHealthClient("/tmp/ori-health.sock")
@@ -131,7 +137,9 @@ def test_aget_health_parses_success_payload(monkeypatch: pytest.MonkeyPatch) -> 
     payload = json.loads((FIXTURES / "runtime_health_success.json").read_text())
     raw = json.dumps(payload).encode("utf-8")
 
-    async def _open_unix_connection(_path: str):
+    async def _open_unix_connection(
+        _path: str,
+    ) -> tuple[_FakeAsyncReader, _FakeAsyncWriter]:
         return _FakeAsyncReader([raw]), _FakeAsyncWriter()
 
     monkeypatch.setattr(asyncio, "open_unix_connection", _open_unix_connection)
@@ -145,7 +153,9 @@ def test_aget_health_parses_success_payload(monkeypatch: pytest.MonkeyPatch) -> 
 def test_aget_health_handles_connection_refused(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    async def _open_unix_connection(_path: str):
+    async def _open_unix_connection(
+        _path: str,
+    ) -> tuple[_FakeAsyncReader, _FakeAsyncWriter]:
         raise ConnectionRefusedError("refused")
 
     monkeypatch.setattr(asyncio, "open_unix_connection", _open_unix_connection)

@@ -11,6 +11,7 @@ import pytest
 from ori_sdk.errors import GatewayContractError
 from ori_sdk.gateway import (
     GATEWAY_HEALTH_TOPIC,
+    GATEWAY_REASONING_REQUEST_TOPIC_FILTER,
     GatewayRetryPolicy,
     build_gateway_reasoning_request,
     gateway_request_topic,
@@ -28,6 +29,32 @@ def test_gateway_topics_include_device_id() -> None:
     assert gateway_request_topic("site-a") == "ori/site-a/reasoning/request"
     assert gateway_response_topic("site-a") == "ori/site-a/reasoning/response"
     assert GATEWAY_HEALTH_TOPIC == "ori/gateway/health"
+    assert GATEWAY_REASONING_REQUEST_TOPIC_FILTER == "ori/+/reasoning/request"
+
+
+@pytest.mark.parametrize(
+    "device_id",
+    ["", " site-a", "site-a ", "site/a", "site+a", "site#a"],
+)
+def test_gateway_topics_reject_invalid_device_ids(device_id: str) -> None:
+    with pytest.raises(ValueError):
+        gateway_request_topic(device_id)
+    with pytest.raises(ValueError):
+        gateway_response_topic(device_id)
+
+
+def test_gateway_topics_do_not_use_legacy_gateway_namespace() -> None:
+    request_topic = gateway_request_topic("site-a")
+    response_topic = gateway_response_topic("site-a")
+    legacy_fragments = [
+        "ori/gateway/site-a/reason/request",
+        "ori/gateway/site-a/reason/response",
+        "/reason/request",
+        "/reason/response",
+    ]
+    for fragment in legacy_fragments:
+        assert fragment not in request_topic
+        assert fragment not in response_topic
 
 
 def test_gateway_request_builder_preserves_request_id() -> None:

@@ -11,6 +11,7 @@ from ori_sdk.errors import (
 )
 from ori_sdk.gateway import (
     GATEWAY_HEALTH_TOPIC,
+    GATEWAY_REASONING_REQUEST_TOPIC_FILTER,
     GatewayRetryPolicy,
     build_gateway_reasoning_request,
     gateway_request_topic,
@@ -51,6 +52,7 @@ __all__ = [
     "SkillMetadataValidationError",
     # gateway
     "GATEWAY_HEALTH_TOPIC",
+    "GATEWAY_REASONING_REQUEST_TOPIC_FILTER",
     "GatewayRetryPolicy",
     "build_gateway_reasoning_request",
     "gateway_request_topic",
