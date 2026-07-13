@@ -64,6 +64,11 @@ def test_get_health_parses_success_payload(monkeypatch: pytest.MonkeyPatch) -> N
     assert response.health is not None
     assert response.health.device_id == "site-a"
     assert response.health.sensors[0].id == "mains-current"
+    assert response.health.alert_outbox.backlog_count == 1
+    assert response.health.gateway_broker_posture.requires_acl_hardening is False
+    assert response.health.state_store_encryption.satisfied is True
+    assert response.health.remote_command_lockout.senders[0].risk_level == "normal"
+    assert response.health.evidence.action_event_type == "SAFETY_ACTION_EXECUTED"
 
 
 def test_get_health_parses_error_payload(monkeypatch: pytest.MonkeyPatch) -> None:

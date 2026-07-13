@@ -59,7 +59,7 @@ validate_skill_metadata_file(Path("skills/my-skill/skill.yaml"))
 
 | SDK version | Runtime baseline | Specs baseline |
 |---|---|---|
-| `0.1.x` | [`ori-runtime`](https://github.com/ori-platform/ori-runtime) `v0.9.0-beta.2+` | [`ori-specs`](https://github.com/ori-platform/ori-specs) `v1` |
+| `0.1.x` | [`ori-runtime`](https://github.com/ori-platform/ori-runtime) `v2.0.0+` health and gateway contracts | [`ori-specs`](https://github.com/ori-platform/ori-specs) `v1` |
 
 The SDK mirrors contracts from [`ori-specs`](https://github.com/ori-platform/ori-specs) and must not import from [`ori-runtime`](https://github.com/ori-platform/ori-runtime) internals.
 

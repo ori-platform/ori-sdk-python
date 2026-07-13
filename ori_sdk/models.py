@@ -45,6 +45,12 @@ def _as_optional_int(value: object, field: str) -> int | None:
     return _as_int(value, field)
 
 
+def _as_optional_float(value: object, field: str) -> float | None:
+    if value is None:
+        return None
+    return _as_float(value, field)
+
+
 def _as_optional_bool(value: object, field: str) -> bool | None:
     if value is None:
         return None
@@ -100,6 +106,59 @@ class AlertTimestamps:
         return {
             "by_channel": dict(self.by_channel),
             "by_trigger": dict(self.by_trigger),
+        }
+
+
+@dataclass(frozen=True)
+class AlertOutboxState:
+    """Queued alert retry posture as reported by runtime health."""
+
+    backlog_count: int
+    oldest_queued_original_ts: int | None
+    oldest_queued_age_ms: int | None
+    retry_interval_minutes: float
+    max_non_tier_d_attempts: int
+    tier_d_critical_warning_threshold: int
+    batch_size: int
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> AlertOutboxState:
+        return cls(
+            backlog_count=_as_int(
+                payload.get("backlog_count"), "alert_outbox.backlog_count"
+            ),
+            oldest_queued_original_ts=_as_optional_int(
+                payload.get("oldest_queued_original_ts"),
+                "alert_outbox.oldest_queued_original_ts",
+            ),
+            oldest_queued_age_ms=_as_optional_int(
+                payload.get("oldest_queued_age_ms"),
+                "alert_outbox.oldest_queued_age_ms",
+            ),
+            retry_interval_minutes=_as_float(
+                payload.get("retry_interval_minutes"),
+                "alert_outbox.retry_interval_minutes",
+            ),
+            max_non_tier_d_attempts=_as_int(
+                payload.get("max_non_tier_d_attempts"),
+                "alert_outbox.max_non_tier_d_attempts",
+            ),
+            tier_d_critical_warning_threshold=_as_int(
+                payload.get("tier_d_critical_warning_threshold"),
+                "alert_outbox.tier_d_critical_warning_threshold",
+            ),
+            batch_size=_as_int(payload.get("batch_size"), "alert_outbox.batch_size"),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "backlog_count": self.backlog_count,
+            "oldest_queued_original_ts": self.oldest_queued_original_ts,
+            "oldest_queued_age_ms": self.oldest_queued_age_ms,
+            "retry_interval_minutes": self.retry_interval_minutes,
+            "max_non_tier_d_attempts": self.max_non_tier_d_attempts,
+            "tier_d_critical_warning_threshold": self.tier_d_critical_warning_threshold,
+            "batch_size": self.batch_size,
         }
 
 
@@ -163,6 +222,292 @@ class DevicePolicyState:
             "valid_until": self.valid_until,
             "issued_at": self.issued_at,
             "is_expired": self.is_expired,
+        }
+
+
+@dataclass(frozen=True)
+class RemoteCommandLockoutSender:
+    """Per-sender remote-command risk state from runtime health."""
+
+    channel: str
+    from_number: str
+    risk_level: str
+    locked_out: bool
+    enforcement_enabled: bool
+    incident_count: int
+    rejection_count: int
+    window_ms: int
+    checked_at_ms: int
+    reason: str
+    stale: bool
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> RemoteCommandLockoutSender:
+        return cls(
+            channel=_as_str(
+                payload.get("channel"), "remote_command_lockout.senders[].channel"
+            ),
+            from_number=_as_str(
+                payload.get("from_number"),
+                "remote_command_lockout.senders[].from_number",
+            ),
+            risk_level=_as_str(
+                payload.get("risk_level"),
+                "remote_command_lockout.senders[].risk_level",
+            ),
+            locked_out=_as_bool(
+                payload.get("locked_out"),
+                "remote_command_lockout.senders[].locked_out",
+            ),
+            enforcement_enabled=_as_bool(
+                payload.get("enforcement_enabled"),
+                "remote_command_lockout.senders[].enforcement_enabled",
+            ),
+            incident_count=_as_int(
+                payload.get("incident_count"),
+                "remote_command_lockout.senders[].incident_count",
+            ),
+            rejection_count=_as_int(
+                payload.get("rejection_count"),
+                "remote_command_lockout.senders[].rejection_count",
+            ),
+            window_ms=_as_int(
+                payload.get("window_ms"), "remote_command_lockout.senders[].window_ms"
+            ),
+            checked_at_ms=_as_int(
+                payload.get("checked_at_ms"),
+                "remote_command_lockout.senders[].checked_at_ms",
+            ),
+            reason=_as_str(
+                payload.get("reason"), "remote_command_lockout.senders[].reason"
+            ),
+            stale=_as_bool(
+                payload.get("stale"), "remote_command_lockout.senders[].stale"
+            ),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "channel": self.channel,
+            "from_number": self.from_number,
+            "risk_level": self.risk_level,
+            "locked_out": self.locked_out,
+            "enforcement_enabled": self.enforcement_enabled,
+            "incident_count": self.incident_count,
+            "rejection_count": self.rejection_count,
+            "window_ms": self.window_ms,
+            "checked_at_ms": self.checked_at_ms,
+            "reason": self.reason,
+            "stale": self.stale,
+        }
+
+
+@dataclass(frozen=True)
+class RemoteCommandLockoutState:
+    enforcement_enabled: bool
+    risk_window_ms: int
+    stale_after_ms: int
+    incident_sender_limit: int
+    senders: list[RemoteCommandLockoutSender]
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> RemoteCommandLockoutState:
+        senders_raw = payload.get("senders")
+        if not isinstance(senders_raw, list):
+            raise ValueError("remote_command_lockout.senders must be an array")
+        return cls(
+            enforcement_enabled=_as_bool(
+                payload.get("enforcement_enabled"),
+                "remote_command_lockout.enforcement_enabled",
+            ),
+            risk_window_ms=_as_int(
+                payload.get("risk_window_ms"), "remote_command_lockout.risk_window_ms"
+            ),
+            stale_after_ms=_as_int(
+                payload.get("stale_after_ms"), "remote_command_lockout.stale_after_ms"
+            ),
+            incident_sender_limit=_as_int(
+                payload.get("incident_sender_limit"),
+                "remote_command_lockout.incident_sender_limit",
+            ),
+            senders=[
+                RemoteCommandLockoutSender.from_dict(
+                    _as_mapping(item, "remote_command_lockout.senders[]")
+                )
+                for item in senders_raw
+            ],
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "enforcement_enabled": self.enforcement_enabled,
+            "risk_window_ms": self.risk_window_ms,
+            "stale_after_ms": self.stale_after_ms,
+            "incident_sender_limit": self.incident_sender_limit,
+            "senders": [sender.to_dict() for sender in self.senders],
+        }
+
+
+@dataclass(frozen=True)
+class GatewayBrokerPosture:
+    available: bool
+    gateway_enabled: bool
+    deployment_check: str
+    anonymous_access: str
+    acl_policy: str
+    require_credentials: bool
+    credentials_configured: bool
+    requires_acl_hardening: bool
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> GatewayBrokerPosture:
+        return cls(
+            available=_as_bool(
+                payload.get("available"), "gateway_broker_posture.available"
+            ),
+            gateway_enabled=_as_bool(
+                payload.get("gateway_enabled"),
+                "gateway_broker_posture.gateway_enabled",
+            ),
+            deployment_check=_as_str(
+                payload.get("deployment_check"),
+                "gateway_broker_posture.deployment_check",
+            ),
+            anonymous_access=_as_str(
+                payload.get("anonymous_access"),
+                "gateway_broker_posture.anonymous_access",
+            ),
+            acl_policy=_as_str(
+                payload.get("acl_policy"), "gateway_broker_posture.acl_policy"
+            ),
+            require_credentials=_as_bool(
+                payload.get("require_credentials"),
+                "gateway_broker_posture.require_credentials",
+            ),
+            credentials_configured=_as_bool(
+                payload.get("credentials_configured"),
+                "gateway_broker_posture.credentials_configured",
+            ),
+            requires_acl_hardening=_as_bool(
+                payload.get("requires_acl_hardening"),
+                "gateway_broker_posture.requires_acl_hardening",
+            ),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "available": self.available,
+            "gateway_enabled": self.gateway_enabled,
+            "deployment_check": self.deployment_check,
+            "anonymous_access": self.anonymous_access,
+            "acl_policy": self.acl_policy,
+            "require_credentials": self.require_credentials,
+            "credentials_configured": self.credentials_configured,
+            "requires_acl_hardening": self.requires_acl_hardening,
+        }
+
+
+@dataclass(frozen=True)
+class StateStoreEncryptionPosture:
+    available: bool
+    mode: str
+    satisfied: bool
+    marker_configured: bool
+    path_prefix_configured: bool
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> StateStoreEncryptionPosture:
+        return cls(
+            available=_as_bool(
+                payload.get("available"), "state_store_encryption.available"
+            ),
+            mode=_as_str(payload.get("mode"), "state_store_encryption.mode"),
+            satisfied=_as_bool(
+                payload.get("satisfied"), "state_store_encryption.satisfied"
+            ),
+            marker_configured=_as_bool(
+                payload.get("marker_configured"),
+                "state_store_encryption.marker_configured",
+            ),
+            path_prefix_configured=_as_bool(
+                payload.get("path_prefix_configured"),
+                "state_store_encryption.path_prefix_configured",
+            ),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "available": self.available,
+            "mode": self.mode,
+            "satisfied": self.satisfied,
+            "marker_configured": self.marker_configured,
+            "path_prefix_configured": self.path_prefix_configured,
+        }
+
+
+@dataclass(frozen=True)
+class EvidenceState:
+    enabled: bool
+    available: bool
+    public_key_hex: str
+    artifact_version: str
+    protocol_version: str
+    action_event_type: str
+    chain_head_hash: str | None
+    pending_export_count: int | None
+    last_attested_action_id: int | None
+    attestation_gap_count: int
+    status_counts: dict[str, int]
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> EvidenceState:
+        return cls(
+            enabled=_as_bool(payload.get("enabled"), "evidence.enabled"),
+            available=_as_bool(payload.get("available"), "evidence.available"),
+            public_key_hex=_as_str(
+                payload.get("public_key_hex"), "evidence.public_key_hex"
+            ),
+            artifact_version=_as_str(
+                payload.get("artifact_version"), "evidence.artifact_version"
+            ),
+            protocol_version=_as_str(
+                payload.get("protocol_version"), "evidence.protocol_version"
+            ),
+            action_event_type=_as_str(
+                payload.get("action_event_type"), "evidence.action_event_type"
+            ),
+            chain_head_hash=_as_optional_str(
+                payload.get("chain_head_hash"), "evidence.chain_head_hash"
+            ),
+            pending_export_count=_as_optional_int(
+                payload.get("pending_export_count"), "evidence.pending_export_count"
+            ),
+            last_attested_action_id=_as_optional_int(
+                payload.get("last_attested_action_id"),
+                "evidence.last_attested_action_id",
+            ),
+            attestation_gap_count=_as_int(
+                payload.get("attestation_gap_count"),
+                "evidence.attestation_gap_count",
+            ),
+            status_counts=_as_int_dict(
+                payload.get("status_counts"), "evidence.status_counts"
+            ),
+        )
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "enabled": self.enabled,
+            "available": self.available,
+            "public_key_hex": self.public_key_hex,
+            "artifact_version": self.artifact_version,
+            "protocol_version": self.protocol_version,
+            "action_event_type": self.action_event_type,
+            "chain_head_hash": self.chain_head_hash,
+            "pending_export_count": self.pending_export_count,
+            "last_attested_action_id": self.last_attested_action_id,
+            "attestation_gap_count": self.attestation_gap_count,
+            "status_counts": dict(self.status_counts),
         }
 
 
@@ -277,9 +622,14 @@ class HealthStatus:
     uptime_s: float
     health_socket_path: str
     capability_posture: CapabilityPosture
+    gateway_broker_posture: GatewayBrokerPosture
+    state_store_encryption: StateStoreEncryptionPosture
     sensors: list[SensorStatus]
     last_alert_timestamps: AlertTimestamps
+    alert_outbox: AlertOutboxState
     device_policy: DevicePolicyState
+    remote_command_lockout: RemoteCommandLockoutState
+    evidence: EvidenceState
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> HealthStatus:
@@ -292,7 +642,18 @@ class HealthStatus:
         alert_raw = _as_mapping(
             payload.get("last_alert_timestamps"), "health.last_alert_timestamps"
         )
+        outbox_raw = _as_mapping(payload.get("alert_outbox"), "health.alert_outbox")
         policy_raw = _as_mapping(payload.get("device_policy"), "health.device_policy")
+        lockout_raw = _as_mapping(
+            payload.get("remote_command_lockout"), "health.remote_command_lockout"
+        )
+        gateway_posture_raw = _as_mapping(
+            payload.get("gateway_broker_posture"), "health.gateway_broker_posture"
+        )
+        encryption_raw = _as_mapping(
+            payload.get("state_store_encryption"), "health.state_store_encryption"
+        )
+        evidence_raw = _as_mapping(payload.get("evidence"), "health.evidence")
         return cls(
             device_id=_as_str(payload.get("device_id"), "health.device_id"),
             uptime_s=_as_float(payload.get("uptime_s"), "health.uptime_s"),
@@ -300,12 +661,19 @@ class HealthStatus:
                 payload.get("health_socket_path"), "health.health_socket_path"
             ),
             capability_posture=CapabilityPosture.from_dict(posture_raw),
+            gateway_broker_posture=GatewayBrokerPosture.from_dict(gateway_posture_raw),
+            state_store_encryption=StateStoreEncryptionPosture.from_dict(
+                encryption_raw
+            ),
             sensors=[
                 SensorStatus.from_dict(_as_mapping(item, "health.sensors[]"))
                 for item in sensors_raw
             ],
             last_alert_timestamps=AlertTimestamps.from_dict(alert_raw),
+            alert_outbox=AlertOutboxState.from_dict(outbox_raw),
             device_policy=DevicePolicyState.from_dict(policy_raw),
+            remote_command_lockout=RemoteCommandLockoutState.from_dict(lockout_raw),
+            evidence=EvidenceState.from_dict(evidence_raw),
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -314,9 +682,14 @@ class HealthStatus:
             "uptime_s": self.uptime_s,
             "health_socket_path": self.health_socket_path,
             "capability_posture": self.capability_posture.to_dict(),
+            "gateway_broker_posture": self.gateway_broker_posture.to_dict(),
+            "state_store_encryption": self.state_store_encryption.to_dict(),
             "sensors": [sensor.to_dict() for sensor in self.sensors],
             "last_alert_timestamps": self.last_alert_timestamps.to_dict(),
+            "alert_outbox": self.alert_outbox.to_dict(),
             "device_policy": self.device_policy.to_dict(),
+            "remote_command_lockout": self.remote_command_lockout.to_dict(),
+            "evidence": self.evidence.to_dict(),
         }
 
 
