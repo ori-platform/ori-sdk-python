@@ -7,10 +7,15 @@ import json
 from pathlib import Path
 
 from ori_sdk.models import (
+    AlertOutboxState,
     AlertTimestamps,
     DevicePolicyState,
+    EvidenceState,
+    GatewayBrokerPosture,
     GatewayReasoningRequest,
     GatewayReasoningResponse,
+    RemoteCommandLockoutState,
+    StateStoreEncryptionPosture,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
@@ -83,4 +88,95 @@ def test_device_policy_state_unavailable_round_trip() -> None:
     parsed = DevicePolicyState.from_dict(payload)
     assert parsed.available is False
     assert parsed.tier is None
+    assert parsed.to_dict() == payload
+
+
+def test_alert_outbox_state_round_trip() -> None:
+    payload = {
+        "backlog_count": 2,
+        "oldest_queued_original_ts": 100,
+        "oldest_queued_age_ms": 25,
+        "retry_interval_minutes": 0.5,
+        "max_non_tier_d_attempts": 10,
+        "tier_d_critical_warning_threshold": 3,
+        "batch_size": 50,
+    }
+    parsed = AlertOutboxState.from_dict(payload)
+    assert parsed.backlog_count == 2
+    assert parsed.to_dict() == payload
+
+
+def test_remote_command_lockout_state_round_trip() -> None:
+    payload = {
+        "enforcement_enabled": True,
+        "risk_window_ms": 3600000,
+        "stale_after_ms": 3600000,
+        "incident_sender_limit": 50,
+        "senders": [
+            {
+                "channel": "sms",
+                "from_number": "+2348012345678",
+                "risk_level": "critical",
+                "locked_out": True,
+                "enforcement_enabled": True,
+                "incident_count": 6,
+                "rejection_count": 4,
+                "window_ms": 3600000,
+                "checked_at_ms": 123,
+                "reason": "recent_security_incident",
+                "stale": False,
+            }
+        ],
+    }
+    parsed = RemoteCommandLockoutState.from_dict(payload)
+    assert parsed.senders[0].from_number == "+2348012345678"
+    assert parsed.senders[0].locked_out is True
+    assert parsed.to_dict() == payload
+
+
+def test_gateway_broker_posture_round_trip() -> None:
+    payload = {
+        "available": True,
+        "gateway_enabled": True,
+        "deployment_check": "required",
+        "anonymous_access": "disabled",
+        "acl_policy": "per_device_required",
+        "require_credentials": True,
+        "credentials_configured": True,
+        "requires_acl_hardening": False,
+    }
+    parsed = GatewayBrokerPosture.from_dict(payload)
+    assert parsed.requires_acl_hardening is False
+    assert parsed.to_dict() == payload
+
+
+def test_state_store_encryption_posture_round_trip() -> None:
+    payload = {
+        "available": True,
+        "mode": "filesystem_required",
+        "satisfied": True,
+        "marker_configured": False,
+        "path_prefix_configured": True,
+    }
+    parsed = StateStoreEncryptionPosture.from_dict(payload)
+    assert parsed.satisfied is True
+    assert parsed.to_dict() == payload
+
+
+def test_evidence_state_round_trip() -> None:
+    payload = {
+        "enabled": True,
+        "available": True,
+        "public_key_hex": "ab" * 32,
+        "artifact_version": "0.2.0",
+        "protocol_version": "1",
+        "action_event_type": "SAFETY_ACTION_EXECUTED",
+        "chain_head_hash": "head-1",
+        "pending_export_count": 0,
+        "last_attested_action_id": 42,
+        "attestation_gap_count": 0,
+        "status_counts": {"signed": 3, "pending": 0},
+    }
+    parsed = EvidenceState.from_dict(payload)
+    assert parsed.action_event_type == "SAFETY_ACTION_EXECUTED"
     assert parsed.to_dict() == payload

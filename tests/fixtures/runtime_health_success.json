@@ -17,6 +17,23 @@
       "expires_at_ms": 2,
       "gateway_last_heartbeat_ms": null
     },
+    "gateway_broker_posture": {
+      "available": true,
+      "gateway_enabled": true,
+      "deployment_check": "required",
+      "anonymous_access": "disabled",
+      "acl_policy": "per_device_required",
+      "require_credentials": true,
+      "credentials_configured": true,
+      "requires_acl_hardening": false
+    },
+    "state_store_encryption": {
+      "available": true,
+      "mode": "filesystem_required",
+      "satisfied": true,
+      "marker_configured": false,
+      "path_prefix_configured": true
+    },
     "sensors": [
       {
         "id": "mains-current",
@@ -36,6 +53,15 @@
         "dangerous_overcurrent": 123
       }
     },
+    "alert_outbox": {
+      "backlog_count": 1,
+      "oldest_queued_original_ts": 100,
+      "oldest_queued_age_ms": 50,
+      "retry_interval_minutes": 0.5,
+      "max_non_tier_d_attempts": 10,
+      "tier_d_critical_warning_threshold": 3,
+      "batch_size": 50
+    },
     "device_policy": {
       "available": true,
       "enabled": true,
@@ -47,6 +73,44 @@
       "valid_until": 9999999999,
       "issued_at": 1000000000,
       "is_expired": false
+    },
+    "remote_command_lockout": {
+      "enforcement_enabled": true,
+      "risk_window_ms": 3600000,
+      "stale_after_ms": 3600000,
+      "incident_sender_limit": 50,
+      "senders": [
+        {
+          "channel": "sms",
+          "from_number": "+2348012345678",
+          "risk_level": "normal",
+          "locked_out": false,
+          "enforcement_enabled": true,
+          "incident_count": 0,
+          "rejection_count": 0,
+          "window_ms": 3600000,
+          "checked_at_ms": 123,
+          "reason": "clean",
+          "stale": false
+        }
+      ]
+    },
+    "evidence": {
+      "enabled": true,
+      "available": true,
+      "public_key_hex": "abababababababababababababababababababababababababababababababab",
+      "artifact_version": "0.2.0",
+      "protocol_version": "1",
+      "action_event_type": "SAFETY_ACTION_EXECUTED",
+      "chain_head_hash": "chain-head-1",
+      "pending_export_count": 0,
+      "last_attested_action_id": 42,
+      "attestation_gap_count": 0,
+      "status_counts": {
+        "signed": 3,
+        "pending": 0,
+        "failed": 0
+      }
     }
   }
 }
