@@ -25,6 +25,9 @@ dev = [
 [tool.setuptools.packages.find]
 include = ["ori_sdk*"]
 
+[tool.setuptools.package-data]
+ori_sdk = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
