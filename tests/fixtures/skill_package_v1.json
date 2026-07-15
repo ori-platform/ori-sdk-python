@@ -1,0 +1,108 @@
+{
+  "name": "canonical-energy-guard",
+  "version": "1.0.0",
+  "author": "ori",
+  "signature": "bundled",
+  "sensors_required": [
+    {
+      "type": "current_clamp",
+      "protocol": "modbus"
+    }
+  ],
+  "triggers": [
+    {
+      "name": "high_usage",
+      "condition": "value > 20",
+      "action_tier": "A",
+      "cooldown_seconds": 60,
+      "escalate_to": "local_slm",
+      "bypass_llm": false,
+      "requires_approval": false,
+      "approval_timeout_seconds": 300,
+      "safe_default_action": "log_to_dashboard"
+    },
+    {
+      "name": "shed_noncritical",
+      "condition": "value > 30",
+      "action_tier": "B",
+      "cooldown_seconds": 30,
+      "escalate_to": "local_slm",
+      "bypass_llm": false,
+      "reasoning_policy": "post_action",
+      "requires_approval": false,
+      "approval_timeout_seconds": 300,
+      "safe_default_action": "log_to_dashboard"
+    },
+    {
+      "name": "isolate_fault",
+      "condition": "value > 40",
+      "action_tier": "C",
+      "cooldown_seconds": 0,
+      "escalate_to": "gateway",
+      "bypass_llm": false,
+      "requires_approval": false,
+      "approval_timeout_seconds": 180,
+      "safe_default_action": "log_to_dashboard"
+    },
+    {
+      "name": "emergency_cutoff",
+      "condition": "value > 50",
+      "action_tier": "D",
+      "cooldown_seconds": 0,
+      "escalate_to": "rule",
+      "bypass_llm": true,
+      "requires_approval": false,
+      "approval_timeout_seconds": 300,
+      "safe_default_action": "log_to_dashboard"
+    }
+  ],
+  "prompts": {
+    "high_usage": "Current draw is {value}{unit}.",
+    "shed_noncritical": "Explain the completed load shed using {history.last_value('mains')}.",
+    "isolate_fault": "Summarise the fault for operator approval."
+  },
+  "actions": {
+    "available": [
+      {
+        "name": "alert_whatsapp",
+        "tier": "A"
+      },
+      {
+        "name": "shed_load",
+        "tier": "B"
+      },
+      {
+        "name": "isolate_circuit",
+        "tier": "C"
+      },
+      {
+        "name": "trip_relay",
+        "tier": "D"
+      }
+    ],
+    "defaults": {
+      "high_usage": [
+        "alert_whatsapp"
+      ],
+      "shed_noncritical": [
+        "shed_load",
+        "alert_whatsapp"
+      ],
+      "isolate_fault": [
+        "isolate_circuit"
+      ],
+      "emergency_cutoff": [
+        "trip_relay"
+      ]
+    }
+  },
+  "config": {
+    "site": "lagos-01",
+    "thresholds": [
+      20,
+      30,
+      40,
+      50
+    ]
+  }
+}
