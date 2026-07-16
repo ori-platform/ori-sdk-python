@@ -184,7 +184,7 @@ def test_rejects_coercible_but_incorrect_scalar_types(
         SkillYamlNormaliser.normalise(skill)
 
 
-def test_rejects_cloud_as_an_escalation_tier() -> None:
+def test_skill_package_rejects_cloud_escalation() -> None:
     skill = _fixture()
     _triggers(skill)[0]["escalate_to"] = "cloud"
 
@@ -204,11 +204,25 @@ def test_rejects_bypass_llm_outside_tier_d() -> None:
 
 def test_tier_d_always_normalises_to_bypass_llm() -> None:
     skill = _fixture()
-    _triggers(skill)[3]["bypass_llm"] = False
+    tier_d_trigger = _triggers(skill)[3]
+    tier_d_trigger["bypass_llm"] = False
+    tier_d_trigger.pop("escalate_to")
 
     package = SkillYamlNormaliser.normalise(skill)
 
     assert package.triggers[3].bypass_llm is True
+    assert package.triggers[3].escalate_to == "rule"
+
+
+@pytest.mark.parametrize("escalate_to", ["local_slm", "gateway"])
+def test_tier_d_rejects_non_rule_escalation(escalate_to: str) -> None:
+    skill = _fixture()
+    _triggers(skill)[3]["escalate_to"] = escalate_to
+
+    with pytest.raises(SkillMetadataValidationError, match="Tier D.*rule") as exc:
+        SkillYamlNormaliser.normalise(skill)
+
+    assert exc.value.code == ORI_SDK_SKILL_VALIDATION
 
 
 def test_rejects_post_action_reasoning_outside_tier_b() -> None:
@@ -219,7 +233,7 @@ def test_rejects_post_action_reasoning_outside_tier_b() -> None:
         SkillYamlNormaliser.normalise(skill)
 
 
-def test_rejects_physical_tier_b_without_approval_or_post_action() -> None:
+def test_skill_package_tier_b_requires_policy() -> None:
     skill = _fixture()
     _triggers(skill)[1].pop("reasoning_policy")
 

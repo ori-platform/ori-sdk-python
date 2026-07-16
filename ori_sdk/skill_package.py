@@ -425,14 +425,19 @@ class SkillYamlNormaliser:
             if action_tier == "D":
                 bypass_llm = True
 
+            escalation_default = "rule" if action_tier == "D" else "local_slm"
             escalation_value = _require_string(
-                trigger.get("escalate_to", "local_slm"),
+                trigger.get("escalate_to", escalation_default),
                 f"triggers[{trigger_name}].escalate_to",
             )
             if escalation_value not in VALID_ESCALATION_TIERS:
                 raise _validation_error(
                     f"trigger {trigger_name!r} has invalid "
                     f"escalate_to={escalation_value!r}; expected rule, local_slm, or gateway"
+                )
+            if action_tier == "D" and escalation_value != "rule":
+                raise _validation_error(
+                    f"Tier D trigger {trigger_name!r} must use escalate_to='rule'"
                 )
 
             reasoning_value = trigger.get("reasoning_policy")
