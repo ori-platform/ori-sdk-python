@@ -8,7 +8,9 @@ This repository intentionally ships a thin, stable v1 bootstrap surface:
 
 - Typed models for [`runtime-health/v1`](https://github.com/ori-platform/ori-specs/blob/main/runtime-health/v1.md) and [`gateway-api/v1`](https://github.com/ori-platform/ori-specs/blob/main/gateway-api/v1.md) contracts.
 - Local Unix-socket [`ori-runtime`](https://github.com/ori-platform/ori-runtime) health client (sync + async).
-- Skill metadata validation helpers aligned with [runtime](https://github.com/ori-platform/ori-runtime) loader invariants.
+- Immutable skill package models and validation aligned with the
+  [`skills-package/v1`](https://github.com/ori-platform/ori-specs/blob/main/skills-package/v1.md)
+  contract and runtime loader invariants.
 - Gateway topic + request/response helper utilities with `request_id` integrity.
 
 Out of scope for this bootstrap:
@@ -42,14 +44,20 @@ else:
     print(response.error)
 ```
 
-## Validation Example
+## Skill Package Example
 
 ```python
 from pathlib import Path
-from ori_sdk.validation import validate_skill_metadata_file
+from ori_sdk import SkillYamlNormaliser
 
-validate_skill_metadata_file(Path("skills/my-skill/skill.yaml"))
+package = SkillYamlNormaliser.load_and_validate(
+    Path("skills/my-skill/skill.yaml")
+)
+print(package.name, package.triggers[0].action_tier)
 ```
+
+The legacy `validate_skill_metadata*` helpers remain available for callers that
+need the original mapping return type.
 
 ## Compatibility
 
@@ -59,9 +67,12 @@ validate_skill_metadata_file(Path("skills/my-skill/skill.yaml"))
 
 | SDK version | Runtime baseline | Specs baseline |
 |---|---|---|
-| `0.1.x` | [`ori-runtime`](https://github.com/ori-platform/ori-runtime) `v2.0.0+` health and gateway contracts | [`ori-specs`](https://github.com/ori-platform/ori-specs) `v1` |
+| `0.1.x` | [`ori-runtime`](https://github.com/ori-platform/ori-runtime) `v2.0.0+` health, gateway, and skill-loader contracts | [`ori-specs`](https://github.com/ori-platform/ori-specs) `v1` |
 
 The SDK mirrors contracts from [`ori-specs`](https://github.com/ori-platform/ori-specs) and must not import from [`ori-runtime`](https://github.com/ori-platform/ori-runtime) internals.
+Skill package validation targets runtime `v2.0.0+`. Legacy v0.9 packages using
+`escalate_to: cloud` must migrate to `escalate_to: gateway`; cloud reasoning is
+gateway-mediated in the current contract.
 
 ## License
 

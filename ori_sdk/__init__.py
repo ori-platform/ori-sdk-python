@@ -42,6 +42,17 @@ from ori_sdk.models import (
     HealthStatus,
     SensorStatus,
 )
+from ori_sdk.skill_package import (
+    ActionRef,
+    ActionsSection,
+    ActionTier,
+    EscalationTier,
+    ReasoningPolicy,
+    SensorRequirement,
+    SkillPackage,
+    SkillYamlNormaliser,
+    Trigger,
+)
 from ori_sdk.validation import validate_skill_metadata, validate_skill_metadata_file
 
 __all__ = [
@@ -81,6 +92,16 @@ __all__ = [
     "HealthResponse",
     "HealthStatus",
     "SensorStatus",
+    # skill package
+    "ActionRef",
+    "ActionTier",
+    "ActionsSection",
+    "EscalationTier",
+    "ReasoningPolicy",
+    "SensorRequirement",
+    "SkillPackage",
+    "SkillYamlNormaliser",
+    "Trigger",
     # validation
     "validate_skill_metadata",
     "validate_skill_metadata_file",
