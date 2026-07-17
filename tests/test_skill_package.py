@@ -5,13 +5,23 @@ from __future__ import annotations
 
 import copy
 import json
-from dataclasses import FrozenInstanceError
+from dataclasses import FrozenInstanceError, replace
 from pathlib import Path
 from typing import cast
 
 import pytest
 
-from ori_sdk import ActionsSection, SkillPackage, SkillYamlNormaliser
+from ori_sdk import (
+    ActionRef,
+    ActionsSection,
+    ActionTier,
+    EscalationTier,
+    ReasoningPolicy,
+    SensorRequirement,
+    SkillPackage,
+    SkillYamlNormaliser,
+    Trigger,
+)
 from ori_sdk.errors import ORI_SDK_SKILL_VALIDATION, SkillMetadataValidationError
 from ori_sdk.validation import MAX_HISTORY_PLACEHOLDERS, validate_skill_metadata
 
@@ -32,6 +42,48 @@ def _actions(skill: dict[str, object]) -> dict[str, object]:
 
 def _defaults(skill: dict[str, object]) -> dict[str, list[str]]:
     return cast(dict[str, list[str]], _actions(skill)["defaults"])
+
+
+def _direct_trigger(
+    *,
+    name: str = "notify",
+    action_tier: ActionTier = "A",
+    escalate_to: EscalationTier = "local_slm",
+    bypass_llm: bool = False,
+    reasoning_policy: ReasoningPolicy | None = None,
+    requires_approval: bool = False,
+    safe_default_action: str = "log_to_dashboard",
+) -> Trigger:
+    return Trigger(
+        name=name,
+        condition="value > 1",
+        action_tier=action_tier,
+        cooldown_seconds=0,
+        escalate_to=escalate_to,
+        bypass_llm=bypass_llm,
+        reasoning_policy=reasoning_policy,
+        requires_approval=requires_approval,
+        approval_timeout_seconds=300,
+        safe_default_action=safe_default_action,
+    )
+
+
+def _direct_package() -> SkillPackage:
+    trigger = _direct_trigger()
+    action = ActionRef(name="alert_operator", tier="A")
+    return SkillPackage(
+        name="direct-skill",
+        version="1.0.0",
+        author="ori",
+        signature="bundled",
+        sensors_required=(SensorRequirement(type="temperature"),),
+        triggers=(trigger,),
+        prompts={trigger.name: "Temperature is {value}{unit}."},
+        actions=ActionsSection(
+            available=(action,), defaults={trigger.name: (action.name,)}
+        ),
+        config={"threshold": 30},
+    )
 
 
 def test_skill_package_loads_fixture() -> None:
@@ -86,7 +138,7 @@ def test_model_constructors_defensively_freeze_caller_owned_collections() -> Non
     source = SkillYamlNormaliser.load_and_validate(FIXTURE)
     prompts = {"high_usage": "original"}
     config: dict[str, object] = {"nested": [1, 2]}
-    defaults = {"high_usage": ("alert_whatsapp",)}
+    defaults = dict(source.actions.defaults)
 
     package = SkillPackage(
         name=source.name,
@@ -109,6 +161,161 @@ def test_model_constructors_defensively_freeze_caller_owned_collections() -> Non
     assert package.prompts["high_usage"] == "original"
     assert package.config["nested"] == (1, 2)
     assert package.actions.defaults["high_usage"] == ("alert_whatsapp",)
+
+
+def test_direct_model_construction_round_trips_through_normaliser() -> None:
+    sensor = SensorRequirement(type=" temperature ", protocol=" modbus ")
+    trigger = _direct_trigger(name=" notify ")
+    action = ActionRef(name=" alert_operator ", tier="A")
+    package = SkillPackage(
+        name=" direct-skill ",
+        version=" 1.0.0 ",
+        author=" ori ",
+        signature=" bundled ",
+        sensors_required=(sensor,),
+        triggers=(trigger,),
+        prompts={trigger.name: "Alert operator."},
+        actions=ActionsSection(
+            available=(action,), defaults={trigger.name: (action.name,)}
+        ),
+        config={},
+    )
+
+    assert package.name == "direct-skill"
+    assert sensor.type == "temperature"
+    assert sensor.protocol == "modbus"
+    assert trigger.name == "notify"
+    assert action.name == "alert_operator"
+    assert SkillYamlNormaliser.normalise(package.to_dict()).to_dict() == (
+        package.to_dict()
+    )
+
+
+def test_sensor_requirement_constructor_rejects_empty_fields() -> None:
+    with pytest.raises(SkillMetadataValidationError, match="sensor.type"):
+        SensorRequirement(type=" ")
+    with pytest.raises(SkillMetadataValidationError, match="sensor.protocol"):
+        SensorRequirement(type="temperature", protocol=" ")
+
+
+def test_action_ref_constructor_rejects_invalid_values() -> None:
+    with pytest.raises(SkillMetadataValidationError, match="action.name"):
+        ActionRef(name=" ", tier="A")
+    with pytest.raises(SkillMetadataValidationError, match="invalid tier"):
+        ActionRef(name="alert_operator", tier=cast(ActionTier, "Z"))
+
+
+def test_trigger_constructor_rejects_invalid_identity_and_policy() -> None:
+    with pytest.raises(SkillMetadataValidationError, match="invalid name format"):
+        _direct_trigger(name="bad trigger")
+    with pytest.raises(SkillMetadataValidationError, match="invalid action_tier"):
+        _direct_trigger(action_tier=cast(ActionTier, "Z"))
+    with pytest.raises(SkillMetadataValidationError, match="escalate_to"):
+        _direct_trigger(escalate_to=cast(EscalationTier, "cloud"))
+    with pytest.raises(SkillMetadataValidationError, match="non-Tier-D"):
+        _direct_trigger(bypass_llm=True)
+    with pytest.raises(SkillMetadataValidationError, match="outside Tier B"):
+        _direct_trigger(reasoning_policy="post_action")
+    with pytest.raises(SkillMetadataValidationError, match="safe_default_action"):
+        _direct_trigger(action_tier="C", safe_default_action=" ")
+
+
+def test_trigger_constructor_canonicalises_tier_d_bypass() -> None:
+    trigger = _direct_trigger(action_tier="D", escalate_to="rule", bypass_llm=False)
+
+    assert trigger.bypass_llm is True
+
+
+def test_actions_section_constructor_rejects_invalid_declarations() -> None:
+    action = ActionRef(name="alert_operator", tier="A")
+    with pytest.raises(SkillMetadataValidationError, match="non-empty"):
+        ActionsSection(available=(), defaults={})
+    with pytest.raises(SkillMetadataValidationError, match="duplicate action"):
+        ActionsSection(available=(action, action), defaults={"notify": (action.name,)})
+    with pytest.raises(SkillMetadataValidationError, match="non-empty"):
+        ActionsSection(available=(action,), defaults={"notify": ()})
+    with pytest.raises(SkillMetadataValidationError, match="undeclared action"):
+        ActionsSection(available=(action,), defaults={"notify": ("missing",)})
+    with pytest.raises(SkillMetadataValidationError, match="invalid name format"):
+        ActionsSection(available=(action,), defaults={" notify ": (action.name,)})
+
+
+@pytest.mark.parametrize("field", ["name", "version", "author"])
+def test_skill_package_constructor_rejects_empty_metadata(field: str) -> None:
+    package = _direct_package()
+
+    with pytest.raises(SkillMetadataValidationError, match=field):
+        if field == "name":
+            replace(package, name=" ")
+        elif field == "version":
+            replace(package, version=" ")
+        else:
+            replace(package, author=" ")
+
+
+def test_skill_package_constructor_rejects_invalid_signature() -> None:
+    with pytest.raises(SkillMetadataValidationError, match="signature"):
+        replace(_direct_package(), signature="rsa:not-supported")
+
+
+def test_skill_package_constructor_rejects_duplicate_triggers() -> None:
+    package = _direct_package()
+    trigger = package.triggers[0]
+
+    with pytest.raises(SkillMetadataValidationError, match="duplicate trigger"):
+        replace(package, triggers=(trigger, trigger))
+
+
+def test_skill_package_constructor_rejects_invalid_defaults_coverage() -> None:
+    package = _direct_package()
+    missing_defaults = ActionsSection(
+        available=package.actions.available,
+        defaults={},
+    )
+    extra_defaults = ActionsSection(
+        available=package.actions.available,
+        defaults={
+            package.triggers[0].name: (package.actions.available[0].name,),
+            "unknown_trigger": (package.actions.available[0].name,),
+        },
+    )
+
+    with pytest.raises(SkillMetadataValidationError, match="missing actions.defaults"):
+        replace(package, actions=missing_defaults)
+    with pytest.raises(SkillMetadataValidationError, match="unknown trigger"):
+        replace(package, actions=extra_defaults)
+
+
+def test_skill_package_constructor_rejects_invalid_tier_b_policy() -> None:
+    trigger = _direct_trigger(name="shed_load", action_tier="B")
+    physical_action = ActionRef(name="shed_noncritical", tier="B")
+    actions = ActionsSection(
+        available=(physical_action,),
+        defaults={trigger.name: (physical_action.name,)},
+    )
+
+    with pytest.raises(SkillMetadataValidationError, match="physical Tier B"):
+        SkillPackage(
+            name="tier-b-skill",
+            version="1.0.0",
+            author="ori",
+            signature="bundled",
+            sensors_required=(),
+            triggers=(trigger,),
+            prompts={},
+            actions=actions,
+            config={},
+        )
+
+
+def test_skill_package_constructor_enforces_prompt_history_limit() -> None:
+    package = _direct_package()
+    oversized_prompt = " ".join(
+        "{history.last_value('sensor')}" for _ in range(MAX_HISTORY_PLACEHOLDERS + 1)
+    )
+
+    with pytest.raises(SkillMetadataValidationError, match="maximum allowed is 16"):
+        replace(package, prompts={package.triggers[0].name: oversized_prompt})
 
 
 def test_preserves_condition_and_prompt_text_verbatim() -> None:

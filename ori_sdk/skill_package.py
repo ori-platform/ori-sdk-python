@@ -76,6 +76,43 @@ def _require_int(value: object, field: str) -> int:
     return value
 
 
+def _normalise_trigger_name(
+    value: object, field: str, *, preserve: bool = False
+) -> str:
+    name = _require_string(value, field, preserve=preserve)
+    if not TRIGGER_NAME_RE.fullmatch(name):
+        raise _validation_error(f"trigger {name!r} has invalid name format")
+    return name
+
+
+def _normalise_action_tier(
+    value: object, field: str, subject: str, *, label: str = "tier"
+) -> ActionTier:
+    tier = _require_string(value, field)
+    if tier not in VALID_TIERS:
+        raise _validation_error(f"{subject} has invalid {label}={tier!r}")
+    return cast(ActionTier, tier)
+
+
+def _normalise_escalation_tier(value: object, trigger_name: str) -> EscalationTier:
+    escalation = _require_string(value, f"triggers[{trigger_name}].escalate_to")
+    if escalation not in VALID_ESCALATION_TIERS:
+        raise _validation_error(
+            f"trigger {trigger_name!r} has invalid escalate_to={escalation!r}; "
+            "expected rule, local_slm, or gateway"
+        )
+    return cast(EscalationTier, escalation)
+
+
+def _normalise_signature(value: object) -> str | None:
+    if value is None:
+        return None
+    signature = _require_string(value, "signature")
+    if signature != "bundled" and not signature.startswith("ed25519:"):
+        raise _validation_error("signature must be 'bundled' or start with 'ed25519:'")
+    return signature
+
+
 def _freeze_value(
     value: object,
     field: str,
@@ -149,6 +186,17 @@ class SensorRequirement:
     type: str
     protocol: str | None = None
 
+    def __post_init__(self) -> None:
+        """Validate and canonicalise a directly constructed requirement."""
+        sensor_type = _require_string(self.type, "sensor.type")
+        protocol = (
+            None
+            if self.protocol is None
+            else _require_string(self.protocol, "sensor.protocol")
+        )
+        object.__setattr__(self, "type", sensor_type)
+        object.__setattr__(self, "protocol", protocol)
+
     def to_dict(self) -> dict[str, object]:
         """Return the normalised transport representation."""
         result: dict[str, object] = {"type": self.type}
@@ -171,6 +219,80 @@ class Trigger:
     requires_approval: bool
     approval_timeout_seconds: int
     safe_default_action: str
+
+    def __post_init__(self) -> None:
+        """Enforce trigger policy for direct and normaliser construction."""
+        name = _normalise_trigger_name(self.name, "trigger.name")
+        action_tier = _normalise_action_tier(
+            self.action_tier,
+            f"triggers[{name}].action_tier",
+            f"trigger {name!r}",
+            label="action_tier",
+        )
+        condition = _require_string(
+            self.condition,
+            f"triggers[{name}].condition",
+            non_empty=False,
+            preserve=True,
+        )
+        cooldown_seconds = _require_int(
+            self.cooldown_seconds, f"triggers[{name}].cooldown_seconds"
+        )
+        escalate_to = _normalise_escalation_tier(self.escalate_to, name)
+        bypass_llm = _require_bool(self.bypass_llm, f"triggers[{name}].bypass_llm")
+        if bypass_llm and action_tier != "D":
+            raise _validation_error(
+                f"trigger {name!r} sets bypass_llm=true for non-Tier-D action_tier"
+            )
+        if action_tier == "D":
+            if escalate_to != "rule":
+                raise _validation_error(
+                    f"Tier D trigger {name!r} must use escalate_to='rule'"
+                )
+            bypass_llm = True
+
+        reasoning_policy: ReasoningPolicy | None = None
+        if self.reasoning_policy is not None:
+            parsed_policy = _require_string(
+                self.reasoning_policy, f"triggers[{name}].reasoning_policy"
+            )
+            if parsed_policy != "post_action":
+                raise _validation_error(
+                    f"trigger {name!r} has invalid reasoning_policy={parsed_policy!r}"
+                )
+            if action_tier != "B":
+                raise _validation_error(
+                    f"trigger {name!r} uses reasoning_policy=post_action outside Tier B"
+                )
+            reasoning_policy = "post_action"
+
+        requires_approval = _require_bool(
+            self.requires_approval, f"triggers[{name}].requires_approval"
+        )
+        approval_timeout_seconds = _require_int(
+            self.approval_timeout_seconds,
+            f"triggers[{name}].approval_timeout_seconds",
+        )
+        safe_default_action = _require_string(
+            self.safe_default_action,
+            f"triggers[{name}].safe_default_action",
+            non_empty=False,
+        )
+        if action_tier == "C" and not safe_default_action:
+            raise _validation_error(
+                f"trigger {name!r} is Tier C and requires safe_default_action"
+            )
+
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "condition", condition)
+        object.__setattr__(self, "action_tier", action_tier)
+        object.__setattr__(self, "cooldown_seconds", cooldown_seconds)
+        object.__setattr__(self, "escalate_to", escalate_to)
+        object.__setattr__(self, "bypass_llm", bypass_llm)
+        object.__setattr__(self, "reasoning_policy", reasoning_policy)
+        object.__setattr__(self, "requires_approval", requires_approval)
+        object.__setattr__(self, "approval_timeout_seconds", approval_timeout_seconds)
+        object.__setattr__(self, "safe_default_action", safe_default_action)
 
     def to_dict(self) -> dict[str, object]:
         """Return the normalised transport representation."""
@@ -201,6 +323,13 @@ class ActionRef:
     name: str
     tier: ActionTier
 
+    def __post_init__(self) -> None:
+        """Validate and canonicalise a directly constructed action reference."""
+        name = _require_string(self.name, "action.name")
+        tier = _normalise_action_tier(self.tier, "action.tier", f"action {name!r}")
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "tier", tier)
+
     def to_dict(self) -> dict[str, object]:
         """Return the normalised transport representation."""
         return {"name": self.name, "tier": self.tier}
@@ -214,15 +343,47 @@ class ActionsSection:
     defaults: Mapping[str, tuple[str, ...]]
 
     def __post_init__(self) -> None:
-        """Defensively freeze caller-owned collections."""
-        frozen_defaults = MappingProxyType(
-            {
-                trigger_name: tuple(action_names)
-                for trigger_name, action_names in self.defaults.items()
-            }
-        )
-        object.__setattr__(self, "available", tuple(self.available))
-        object.__setattr__(self, "defaults", frozen_defaults)
+        """Validate action declarations and defensively freeze collections."""
+        if not isinstance(self.available, (list, tuple)) or not self.available:
+            raise _validation_error("actions.available must be a non-empty array")
+
+        available: list[ActionRef] = []
+        available_names: set[str] = set()
+        for index, action in enumerate(self.available):
+            if not isinstance(action, ActionRef):
+                raise _validation_error(
+                    f"actions.available[{index}] must be an ActionRef"
+                )
+            if action.name in available_names:
+                raise _validation_error(f"duplicate action name {action.name!r}")
+            available_names.add(action.name)
+            available.append(action)
+
+        defaults = _require_mapping(self.defaults, "actions.defaults")
+        frozen_defaults: dict[str, tuple[str, ...]] = {}
+        for raw_trigger_name, raw_action_names in defaults.items():
+            trigger_name = _normalise_trigger_name(
+                raw_trigger_name, "actions.defaults key", preserve=True
+            )
+            if not isinstance(raw_action_names, (list, tuple)) or not raw_action_names:
+                raise _validation_error(
+                    f"actions.defaults.{trigger_name} must be a non-empty array"
+                )
+            action_names: list[str] = []
+            for raw_action_name in raw_action_names:
+                action_name = _require_string(
+                    raw_action_name, f"actions.defaults.{trigger_name}[]"
+                )
+                if action_name not in available_names:
+                    raise _validation_error(
+                        f"actions.defaults.{trigger_name} references undeclared "
+                        f"action {action_name!r}"
+                    )
+                action_names.append(action_name)
+            frozen_defaults[trigger_name] = tuple(action_names)
+
+        object.__setattr__(self, "available", tuple(available))
+        object.__setattr__(self, "defaults", MappingProxyType(frozen_defaults))
 
     def to_dict(self) -> dict[str, object]:
         """Return the normalised transport representation."""
@@ -233,6 +394,44 @@ class ActionsSection:
                 for trigger_name, action_names in self.defaults.items()
             },
         }
+
+
+def _validate_trigger_action_contract(
+    triggers: tuple[Trigger, ...], actions: ActionsSection
+) -> None:
+    trigger_names = {trigger.name for trigger in triggers}
+    default_keys = set(actions.defaults)
+    missing = sorted(trigger_names - default_keys)
+    extra = sorted(default_keys - trigger_names)
+    if missing:
+        raise _validation_error(
+            f"missing actions.defaults mapping for trigger(s): {', '.join(missing)}"
+        )
+    if extra:
+        raise _validation_error(
+            f"actions.defaults contains unknown trigger(s): {', '.join(extra)}"
+        )
+
+    action_tiers = {action.name: action.tier for action in actions.available}
+    for trigger in triggers:
+        default_actions = actions.defaults[trigger.name]
+        has_physical_action = any(
+            action_tiers[action_name] == "B" for action_name in default_actions
+        )
+        if trigger.action_tier != "B" or not has_physical_action:
+            continue
+        if not trigger.requires_approval and trigger.reasoning_policy != "post_action":
+            raise _validation_error(
+                f"physical Tier B trigger {trigger.name!r} must declare "
+                "requires_approval=true or reasoning_policy=post_action"
+            )
+        if trigger.reasoning_policy == "post_action" and not any(
+            action_tiers[action_name] == "A" for action_name in default_actions
+        ):
+            raise _validation_error(
+                f"physical Tier B post_action trigger {trigger.name!r} must "
+                "include a Tier A default action for operator notification"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -250,21 +449,63 @@ class SkillPackage:
     config: Mapping[str, object]
 
     def __post_init__(self) -> None:
-        """Defensively freeze caller-owned collections and validate config values."""
+        """Validate the complete package and defensively freeze collections."""
+        name = _require_string(self.name, "name")
+        version = _require_string(self.version, "version")
+        author = _require_string(self.author, "author")
+        signature = _normalise_signature(self.signature)
+
+        if not isinstance(self.sensors_required, (list, tuple)):
+            raise _validation_error("sensors_required must be an array")
+        sensors_required = tuple(self.sensors_required)
+        for index, sensor in enumerate(sensors_required):
+            if not isinstance(sensor, SensorRequirement):
+                raise _validation_error(
+                    f"sensors_required[{index}] must be a SensorRequirement"
+                )
+
+        if not isinstance(self.triggers, (list, tuple)) or not self.triggers:
+            raise _validation_error("triggers must be a non-empty array")
+        triggers = tuple(self.triggers)
+        seen_trigger_names: set[str] = set()
+        for index, trigger in enumerate(triggers):
+            if not isinstance(trigger, Trigger):
+                raise _validation_error(f"triggers[{index}] must be a Trigger")
+            if trigger.name in seen_trigger_names:
+                raise _validation_error(f"duplicate trigger name {trigger.name!r}")
+            seen_trigger_names.add(trigger.name)
+
         prompts = _require_mapping(self.prompts, "prompts")
         frozen_prompts: dict[str, str] = {}
         for prompt_key, template in prompts.items():
-            frozen_prompts[prompt_key] = _require_string(
+            parsed_template = _require_string(
                 template,
                 f"prompts.{prompt_key}",
                 non_empty=False,
                 preserve=True,
             )
+            count = len(HISTORY_PLACEHOLDER_RE.findall(parsed_template))
+            if count > MAX_HISTORY_PLACEHOLDERS:
+                scope = "trigger" if prompt_key in seen_trigger_names else "prompt key"
+                raise _validation_error(
+                    f"{scope} {prompt_key!r} contains {count} history placeholders; "
+                    f"maximum allowed is {MAX_HISTORY_PLACEHOLDERS}"
+                )
+            frozen_prompts[prompt_key] = parsed_template
+
+        if not isinstance(self.actions, ActionsSection):
+            raise _validation_error("actions must be an ActionsSection")
+        _validate_trigger_action_contract(triggers, self.actions)
+
         config = _require_mapping(self.config, "config")
         frozen_config = cast(Mapping[str, object], _freeze_value(config, "config"))
 
-        object.__setattr__(self, "sensors_required", tuple(self.sensors_required))
-        object.__setattr__(self, "triggers", tuple(self.triggers))
+        object.__setattr__(self, "name", name)
+        object.__setattr__(self, "version", version)
+        object.__setattr__(self, "author", author)
+        object.__setattr__(self, "signature", signature)
+        object.__setattr__(self, "sensors_required", sensors_required)
+        object.__setattr__(self, "triggers", triggers)
         object.__setattr__(self, "prompts", MappingProxyType(frozen_prompts))
         object.__setattr__(self, "config", frozen_config)
 
@@ -343,7 +584,6 @@ class SkillYamlNormaliser:
         prompts = cls._parse_prompts(root.get("prompts", {}), triggers)
         config = _require_mapping(root.get("config", {}), "config")
 
-        cls._validate_tier_b_policies(triggers, actions)
         return (
             SkillPackage(
                 name=name,
@@ -361,14 +601,7 @@ class SkillYamlNormaliser:
 
     @staticmethod
     def _parse_signature(value: object) -> str | None:
-        if value is None:
-            return None
-        signature = _require_string(value, "signature")
-        if signature != "bundled" and not signature.startswith("ed25519:"):
-            raise _validation_error(
-                "signature must be 'bundled' or start with 'ed25519:'"
-            )
-        return signature
+        return _normalise_signature(value)
 
     @staticmethod
     def _parse_sensors(value: object) -> tuple[SensorRequirement, ...]:
@@ -394,24 +627,17 @@ class SkillYamlNormaliser:
         for index, item in enumerate(raw_triggers):
             field = f"triggers[{index}]"
             trigger = _require_mapping(item, field)
-            trigger_name = _require_string(trigger.get("name"), f"{field}.name")
-            if not TRIGGER_NAME_RE.fullmatch(trigger_name):
-                raise _validation_error(
-                    f"trigger {trigger_name!r} has invalid name format"
-                )
+            trigger_name = _normalise_trigger_name(trigger.get("name"), f"{field}.name")
             if trigger_name in seen_names:
                 raise _validation_error(f"duplicate trigger name {trigger_name!r}")
             seen_names.add(trigger_name)
 
-            action_tier_value = _require_string(
-                trigger.get("action_tier"), f"triggers[{trigger_name}].action_tier"
+            action_tier = _normalise_action_tier(
+                trigger.get("action_tier"),
+                f"triggers[{trigger_name}].action_tier",
+                f"trigger {trigger_name!r}",
+                label="action_tier",
             )
-            if action_tier_value not in VALID_TIERS:
-                raise _validation_error(
-                    f"trigger {trigger_name!r} has invalid "
-                    f"action_tier={action_tier_value!r}"
-                )
-            action_tier = cast(ActionTier, action_tier_value)
 
             bypass_llm = _require_bool(
                 trigger.get("bypass_llm", False),
@@ -426,15 +652,9 @@ class SkillYamlNormaliser:
                 bypass_llm = True
 
             escalation_default = "rule" if action_tier == "D" else "local_slm"
-            escalation_value = _require_string(
-                trigger.get("escalate_to", escalation_default),
-                f"triggers[{trigger_name}].escalate_to",
+            escalation_value = _normalise_escalation_tier(
+                trigger.get("escalate_to", escalation_default), trigger_name
             )
-            if escalation_value not in VALID_ESCALATION_TIERS:
-                raise _validation_error(
-                    f"trigger {trigger_name!r} has invalid "
-                    f"escalate_to={escalation_value!r}; expected rule, local_slm, or gateway"
-                )
             if action_tier == "D" and escalation_value != "rule":
                 raise _validation_error(
                     f"Tier D trigger {trigger_name!r} must use escalate_to='rule'"
@@ -483,7 +703,7 @@ class SkillYamlNormaliser:
                         trigger.get("cooldown_seconds", 0),
                         f"triggers[{trigger_name}].cooldown_seconds",
                     ),
-                    escalate_to=cast(EscalationTier, escalation_value),
+                    escalate_to=escalation_value,
                     bypass_llm=bypass_llm,
                     reasoning_policy=reasoning_policy,
                     requires_approval=_require_bool(
@@ -514,13 +734,13 @@ class SkillYamlNormaliser:
             if action_name in available_names:
                 raise _validation_error(f"duplicate action name {action_name!r}")
             available_names.add(action_name)
-            tier_value = _require_string(action.get("tier"), f"{field}.tier")
-            if tier_value not in VALID_TIERS:
-                raise _validation_error(
-                    f"action {action_name!r} has invalid tier={tier_value!r}"
-                )
             available.append(
-                ActionRef(name=action_name, tier=cast(ActionTier, tier_value))
+                ActionRef(
+                    name=action_name,
+                    tier=_normalise_action_tier(
+                        action.get("tier"), f"{field}.tier", f"action {action_name!r}"
+                    ),
+                )
             )
 
         raw_defaults = _require_mapping(raw_actions.get("defaults"), "actions.defaults")
@@ -578,34 +798,6 @@ class SkillYamlNormaliser:
                 )
             prompts[prompt_key] = template
         return prompts
-
-    @staticmethod
-    def _validate_tier_b_policies(
-        triggers: tuple[Trigger, ...], actions: ActionsSection
-    ) -> None:
-        action_tiers = {action.name: action.tier for action in actions.available}
-        for trigger in triggers:
-            default_actions = actions.defaults[trigger.name]
-            has_physical_action = any(
-                action_tiers[action_name] == "B" for action_name in default_actions
-            )
-            if trigger.action_tier != "B" or not has_physical_action:
-                continue
-            if (
-                not trigger.requires_approval
-                and trigger.reasoning_policy != "post_action"
-            ):
-                raise _validation_error(
-                    f"physical Tier B trigger {trigger.name!r} must declare "
-                    "requires_approval=true or reasoning_policy=post_action"
-                )
-            if trigger.reasoning_policy == "post_action" and not any(
-                action_tiers[action_name] == "A" for action_name in default_actions
-            ):
-                raise _validation_error(
-                    f"physical Tier B post_action trigger {trigger.name!r} must "
-                    "include a Tier A default action for operator notification"
-                )
 
 
 __all__ = [
