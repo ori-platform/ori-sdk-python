@@ -282,6 +282,11 @@ mypy ori_sdk
 
 > ## Compatibility
 
+* Python `3.11`
+* Python `3.12`
+
+### Contract Compatibility Matrix
+
 | **SDK Version** | **Runtime Baseline**                                                | **Specification Baseline** |
 | :-------------- | :------------------------------------------------------------------ | :------------------------- |
 | **`0.1.x`**     | `ori-runtime` `v2.0.0+` health, gateway, and skill-loader contracts | `ori-specs` `v1`           |
