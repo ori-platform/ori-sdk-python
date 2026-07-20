@@ -8,21 +8,59 @@ from pathlib import Path
 
 import pytest
 
-from ori_sdk.errors import GatewayContractError
+import ori_sdk
+from ori_sdk.errors import (
+    ORI_SDK_DEVICE_ID_MISMATCH,
+    ORI_SDK_EXPORT_TYPE_MISMATCH,
+    ORI_SDK_PROPOSAL_ID_MISMATCH,
+    ORI_SDK_REQUEST_ID_MISMATCH,
+    GatewayContractError,
+)
 from ori_sdk.gateway import (
     GATEWAY_HEALTH_TOPIC,
     GATEWAY_REASONING_REQUEST_TOPIC_FILTER,
+    RUNTIME_NODE_HEARTBEAT_TOPIC_FILTER,
+    TIER_C_ENRICHMENT_REQUEST_TOPIC_FILTER,
     GatewayRetryPolicy,
     build_gateway_reasoning_request,
+    export_request_topic,
+    export_response_topic,
+    export_response_topic_filter,
     gateway_request_topic,
     gateway_response_topic,
     new_request_id,
     parse_gateway_reasoning_response,
     response_matches_request,
+    runtime_node_heartbeat_topic,
+    tier_c_enrichment_request_topic,
+    tier_c_enrichment_response_topic,
+    validate_export_response,
     validate_response,
+    validate_tier_c_enrichment_response,
+)
+from ori_sdk.gateway_models import (
+    RuntimeExportRequest,
+    RuntimeExportResponse,
+    TierCEnrichmentRequest,
+    TierCEnrichmentResponse,
 )
 
 FIXTURES = Path(__file__).parent / "fixtures"
+
+
+def test_gateway_api_v1_helpers_are_public_exports() -> None:
+    assert {
+        "RUNTIME_NODE_HEARTBEAT_TOPIC_FILTER",
+        "TIER_C_ENRICHMENT_REQUEST_TOPIC_FILTER",
+        "runtime_node_heartbeat_topic",
+        "export_request_topic",
+        "export_response_topic",
+        "export_response_topic_filter",
+        "tier_c_enrichment_request_topic",
+        "tier_c_enrichment_response_topic",
+        "validate_export_response",
+        "validate_tier_c_enrichment_response",
+    } <= set(ori_sdk.__all__)
 
 
 def test_gateway_topics_include_device_id() -> None:
@@ -32,15 +70,64 @@ def test_gateway_topics_include_device_id() -> None:
     assert GATEWAY_REASONING_REQUEST_TOPIC_FILTER == "ori/+/reasoning/request"
 
 
+def test_runtime_heartbeat_topic_helper() -> None:
+    assert runtime_node_heartbeat_topic("site-a") == "ori/site-a/runtime/heartbeat"
+    assert RUNTIME_NODE_HEARTBEAT_TOPIC_FILTER == "ori/+/runtime/heartbeat"
+    with pytest.raises(ValueError, match="MQTT topic"):
+        runtime_node_heartbeat_topic("site/a")
+
+
+def test_export_topic_helpers() -> None:
+    assert export_request_topic("site-a") == "ori/site-a/export/request"
+    assert (
+        export_response_topic("site-a", "request_123")
+        == "ori/site-a/export/response/request_123"
+    )
+    assert export_response_topic_filter("site-a") == "ori/site-a/export/response/+"
+    with pytest.raises(ValueError, match="MQTT topic"):
+        export_request_topic("site/a")
+    with pytest.raises(ValueError, match="MQTT topic"):
+        export_response_topic("site/a", "request-1")
+    with pytest.raises(ValueError, match="MQTT topic"):
+        export_response_topic_filter("site/a")
+
+
+def test_tier_c_enrichment_topic_helpers() -> None:
+    assert (
+        tier_c_enrichment_request_topic("site-a")
+        == "ori/site-a/tier_c/enrichment/request"
+    )
+    assert (
+        tier_c_enrichment_response_topic("site-a")
+        == "ori/site-a/tier_c/enrichment/response"
+    )
+    assert TIER_C_ENRICHMENT_REQUEST_TOPIC_FILTER == "ori/+/tier_c/enrichment/request"
+    with pytest.raises(ValueError, match="MQTT topic"):
+        tier_c_enrichment_request_topic("site/a")
+    with pytest.raises(ValueError, match="MQTT topic"):
+        tier_c_enrichment_response_topic("site/a")
+
+
 @pytest.mark.parametrize(
     "device_id",
-    ["", " site-a", "site-a ", "site/a", "site+a", "site#a"],
+    ["", " site-a", "site-a ", "site/a", "site+a", "site#a", "site|a"],
 )
 def test_gateway_topics_reject_invalid_device_ids(device_id: str) -> None:
     with pytest.raises(ValueError):
         gateway_request_topic(device_id)
     with pytest.raises(ValueError):
         gateway_response_topic(device_id)
+
+
+@pytest.mark.parametrize(
+    "request_id",
+    ["", " request", "request ", "request/id", "request.id", "réquest", "a" * 129],
+)
+def test_export_response_topic_rejects_invalid_request_ids(
+    request_id: str,
+) -> None:
+    with pytest.raises(ValueError):
+        export_response_topic("site-a", request_id)
 
 
 def test_gateway_topics_do_not_use_legacy_gateway_namespace() -> None:
@@ -75,6 +162,48 @@ def test_gateway_request_builder_preserves_request_id() -> None:
     assert request.request_id == expected_id
 
 
+def test_gateway_request_builder_uses_strict_identifier_validation() -> None:
+    with pytest.raises(ValueError, match="request_id must not be empty"):
+        build_gateway_reasoning_request(
+            request_id="",
+            device_id="site-a",
+            sensor_type="current_clamp",
+            trigger_name="dangerous_overcurrent",
+            prompt="Is this dangerous?",
+            context_value=14.2,
+            context_unit="A",
+            context_timestamp=123,
+            context_history=[],
+            action_tier_hint="D",
+        )
+    with pytest.raises(ValueError, match="auth delimiters"):
+        build_gateway_reasoning_request(
+            request_id="request-1",
+            device_id="site|a",
+            sensor_type="current_clamp",
+            trigger_name="dangerous_overcurrent",
+            prompt="Is this dangerous?",
+            context_value=14.2,
+            context_unit="A",
+            context_timestamp=123,
+            context_history=[],
+            action_tier_hint="D",
+        )
+    with pytest.raises(ValueError, match="ASCII"):
+        build_gateway_reasoning_request(
+            request_id="request.1",
+            device_id="site-a",
+            sensor_type="current_clamp",
+            trigger_name="dangerous_overcurrent",
+            prompt="Is this dangerous?",
+            context_value=14.2,
+            context_unit="A",
+            context_timestamp=123,
+            context_history=[],
+            action_tier_hint="D",
+        )
+
+
 def test_gateway_response_correlation() -> None:
     req_payload = json.loads((FIXTURES / "gateway_reasoning_request.json").read_text())
     resp_payload = json.loads(
@@ -96,6 +225,14 @@ def test_gateway_response_correlation() -> None:
     )
     response = parse_gateway_reasoning_response(resp_payload)
     assert response_matches_request(request, response) is True
+
+
+def test_gateway_response_parser_uses_strict_request_id_validation() -> None:
+    payload = json.loads((FIXTURES / "gateway_reasoning_response.json").read_text())
+    payload["request_id"] = "request.with.dot"
+
+    with pytest.raises(ValueError, match="ASCII"):
+        parse_gateway_reasoning_response(payload)
 
 
 def test_gateway_retry_policy_defaults() -> None:
@@ -175,3 +312,54 @@ def test_gateway_error_response_correlation() -> None:
     response = parse_gateway_reasoning_response(resp_payload)
     assert response.error == "provider timeout"
     validate_response(request, response)
+
+
+def test_validate_export_response_checks_all_correlation_fields() -> None:
+    request_payload = json.loads((FIXTURES / "runtime_export_request.json").read_text())
+    response_payload = json.loads(
+        (FIXTURES / "runtime_export_response.json").read_text()
+    )
+    request = RuntimeExportRequest.from_dict(request_payload)
+    response = RuntimeExportResponse.from_dict(response_payload)
+    validate_export_response(request, response)
+
+    expected_codes = {
+        "request_id": ORI_SDK_REQUEST_ID_MISMATCH,
+        "device_id": ORI_SDK_DEVICE_ID_MISMATCH,
+        "export_type": ORI_SDK_EXPORT_TYPE_MISMATCH,
+    }
+    for field_name, expected_code in expected_codes.items():
+        mismatched = dict(response_payload)
+        mismatched[field_name] = (
+            "health" if field_name == "export_type" else "different"
+        )
+        with pytest.raises(GatewayContractError, match=field_name) as error_info:
+            validate_export_response(
+                request, RuntimeExportResponse.from_dict(mismatched)
+            )
+        assert error_info.value.code == expected_code
+
+
+def test_validate_tier_c_enrichment_response_checks_both_ids() -> None:
+    request_payload = json.loads(
+        (FIXTURES / "tier_c_enrichment_request.json").read_text()
+    )
+    response_payload = json.loads(
+        (FIXTURES / "tier_c_enrichment_response.json").read_text()
+    )
+    request = TierCEnrichmentRequest.from_dict(request_payload)
+    response = TierCEnrichmentResponse.from_dict(response_payload)
+    validate_tier_c_enrichment_response(request, response)
+
+    expected_codes = {
+        "request_id": ORI_SDK_REQUEST_ID_MISMATCH,
+        "proposal_id": ORI_SDK_PROPOSAL_ID_MISMATCH,
+    }
+    for field_name, expected_code in expected_codes.items():
+        mismatched = dict(response_payload)
+        mismatched[field_name] = "different"
+        with pytest.raises(GatewayContractError, match=field_name) as error_info:
+            validate_tier_c_enrichment_response(
+                request, TierCEnrichmentResponse.from_dict(mismatched)
+            )
+        assert error_info.value.code == expected_code

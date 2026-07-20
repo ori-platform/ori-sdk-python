@@ -59,6 +59,29 @@ print(package.name, package.triggers[0].action_tier)
 The legacy `validate_skill_metadata*` helpers remain available for callers that
 need the original mapping return type.
 
+## Gateway API v1 Models
+
+```python
+from ori_sdk import RuntimeExportRequest, export_request_topic
+
+request = RuntimeExportRequest(
+    request_id="report-2026-07",
+    export_type="sensor_history",
+    device_id="site-a-edge-01",
+    since_ms=1717000000000,
+    until_ms=1717600000000,
+    limit=500,
+    params={"sensor_id": "current-main", "bucket_ms": 3600000},
+)
+
+print(export_request_topic(request.device_id), request.to_dict())
+```
+
+Gateway models represent logical payloads after transport authentication and
+decryption. They do not model HMAC or AES-GCM envelopes, open MQTT connections,
+or grant mutation or actuation authority. Runtime exports are read-only, and
+Tier C enrichment remains advisory.
+
 ## Compatibility
 
 - Python `3.11` and `3.12`

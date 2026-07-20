@@ -1,0 +1,1 @@
+{"request_id":"uuid4-string","export_type":"sensor_history","device_id":"site-a-edge-01","since_ms":1717000000000,"until_ms":1717600000000,"limit":500,"page_token":"","params":{"sensor_id":"current-main","bucket_ms":3600000}}

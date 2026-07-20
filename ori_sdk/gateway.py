@@ -8,23 +8,27 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass
 
-from ori_sdk.errors import ORI_SDK_REQUEST_ID_MISMATCH, GatewayContractError
+from ori_sdk.errors import (
+    ORI_SDK_DEVICE_ID_MISMATCH,
+    ORI_SDK_EXPORT_TYPE_MISMATCH,
+    ORI_SDK_PROPOSAL_ID_MISMATCH,
+    ORI_SDK_REQUEST_ID_MISMATCH,
+    GatewayContractError,
+)
+from ori_sdk.gateway_models import (
+    RuntimeExportRequest,
+    RuntimeExportResponse,
+    TierCEnrichmentRequest,
+    TierCEnrichmentResponse,
+    _validate_mqtt_device_id,
+    _validate_mqtt_request_id,
+)
 from ori_sdk.models import GatewayReasoningRequest, GatewayReasoningResponse
 
 GATEWAY_HEALTH_TOPIC = "ori/gateway/health"
 GATEWAY_REASONING_REQUEST_TOPIC_FILTER = "ori/+/reasoning/request"
-
-
-def _validate_mqtt_device_id(device_id: str) -> str:
-    if not device_id:
-        raise ValueError("device_id must not be empty")
-    if device_id.strip() != device_id:
-        raise ValueError("device_id must not contain leading or trailing whitespace")
-    if any(char in device_id for char in "/+#"):
-        raise ValueError(
-            "device_id must not contain MQTT topic separators or wildcards"
-        )
-    return device_id
+RUNTIME_NODE_HEARTBEAT_TOPIC_FILTER = "ori/+/runtime/heartbeat"
+TIER_C_ENRICHMENT_REQUEST_TOPIC_FILTER = "ori/+/tier_c/enrichment/request"
 
 
 def gateway_request_topic(device_id: str) -> str:
@@ -35,6 +39,37 @@ def gateway_request_topic(device_id: str) -> str:
 def gateway_response_topic(device_id: str) -> str:
     device = _validate_mqtt_device_id(device_id)
     return f"ori/{device}/reasoning/response"
+
+
+def runtime_node_heartbeat_topic(device_id: str) -> str:
+    device = _validate_mqtt_device_id(device_id)
+    return f"ori/{device}/runtime/heartbeat"
+
+
+def export_request_topic(device_id: str) -> str:
+    device = _validate_mqtt_device_id(device_id)
+    return f"ori/{device}/export/request"
+
+
+def export_response_topic(device_id: str, request_id: str) -> str:
+    device = _validate_mqtt_device_id(device_id)
+    request = _validate_mqtt_request_id(request_id)
+    return f"ori/{device}/export/response/{request}"
+
+
+def export_response_topic_filter(device_id: str) -> str:
+    device = _validate_mqtt_device_id(device_id)
+    return f"ori/{device}/export/response/+"
+
+
+def tier_c_enrichment_request_topic(device_id: str) -> str:
+    device = _validate_mqtt_device_id(device_id)
+    return f"ori/{device}/tier_c/enrichment/request"
+
+
+def tier_c_enrichment_response_topic(device_id: str) -> str:
+    device = _validate_mqtt_device_id(device_id)
+    return f"ori/{device}/tier_c/enrichment/response"
 
 
 def new_request_id() -> str:
@@ -55,9 +90,12 @@ def build_gateway_reasoning_request(
     timeout_ms: int = 10_000,
     request_id: str | None = None,
 ) -> GatewayReasoningRequest:
+    validated_device_id = _validate_mqtt_device_id(device_id)
+    candidate_request_id = new_request_id() if request_id is None else request_id
+    validated_request_id = _validate_mqtt_request_id(candidate_request_id)
     request_payload: dict[str, object] = {
-        "request_id": request_id or new_request_id(),
-        "device_id": device_id,
+        "request_id": validated_request_id,
+        "device_id": validated_device_id,
         "sensor_type": sensor_type,
         "trigger_name": trigger_name,
         "prompt": prompt,
@@ -76,7 +114,9 @@ def build_gateway_reasoning_request(
 def parse_gateway_reasoning_response(
     payload: dict[str, object],
 ) -> GatewayReasoningResponse:
-    return GatewayReasoningResponse.from_dict(payload)
+    response = GatewayReasoningResponse.from_dict(payload)
+    _validate_mqtt_request_id(response.request_id)
+    return response
 
 
 def response_matches_request(
@@ -100,6 +140,50 @@ def validate_response(
             f"response request_id {response.request_id!r} does not match "
             f"request request_id {request.request_id!r}",
             code=ORI_SDK_REQUEST_ID_MISMATCH,
+        )
+
+
+def validate_export_response(
+    request: RuntimeExportRequest,
+    response: RuntimeExportResponse,
+) -> None:
+    """Validate export response correlation without changing either envelope."""
+    if request.request_id != response.request_id:
+        raise GatewayContractError(
+            f"response request_id {response.request_id!r} does not match "
+            f"request request_id {request.request_id!r}",
+            code=ORI_SDK_REQUEST_ID_MISMATCH,
+        )
+    if request.device_id != response.device_id:
+        raise GatewayContractError(
+            f"response device_id {response.device_id!r} does not match "
+            f"request device_id {request.device_id!r}",
+            code=ORI_SDK_DEVICE_ID_MISMATCH,
+        )
+    if request.export_type != response.export_type:
+        raise GatewayContractError(
+            f"response export_type {response.export_type!r} does not match "
+            f"request export_type {request.export_type!r}",
+            code=ORI_SDK_EXPORT_TYPE_MISMATCH,
+        )
+
+
+def validate_tier_c_enrichment_response(
+    request: TierCEnrichmentRequest,
+    response: TierCEnrichmentResponse,
+) -> None:
+    """Validate both identifiers that bind a Tier C enrichment exchange."""
+    if request.request_id != response.request_id:
+        raise GatewayContractError(
+            f"response request_id {response.request_id!r} does not match "
+            f"request request_id {request.request_id!r}",
+            code=ORI_SDK_REQUEST_ID_MISMATCH,
+        )
+    if request.proposal_id != response.proposal_id:
+        raise GatewayContractError(
+            f"response proposal_id {response.proposal_id!r} does not match "
+            f"request proposal_id {request.proposal_id!r}",
+            code=ORI_SDK_PROPOSAL_ID_MISMATCH,
         )
 
 
