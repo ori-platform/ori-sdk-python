@@ -4,7 +4,11 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
+from typing import cast
+
+import pytest
 
 from ori_sdk.models import (
     AlertOutboxState,
@@ -69,7 +73,11 @@ def test_device_policy_state_available_round_trip() -> None:
     parsed = DevicePolicyState.from_dict(payload)
     assert parsed.available is True
     assert parsed.tier == "B"
-    assert parsed.to_dict() == payload
+    assert parsed.to_dict() == {
+        **payload,
+        "alert_sms_monthly_cap": None,
+        "alert_whatsapp_monthly_cap": None,
+    }
 
 
 def test_device_policy_state_unavailable_round_trip() -> None:
@@ -88,7 +96,61 @@ def test_device_policy_state_unavailable_round_trip() -> None:
     parsed = DevicePolicyState.from_dict(payload)
     assert parsed.available is False
     assert parsed.tier is None
-    assert parsed.to_dict() == payload
+    assert parsed.to_dict() == {
+        **payload,
+        "alert_sms_monthly_cap": None,
+        "alert_whatsapp_monthly_cap": None,
+    }
+
+
+@pytest.mark.parametrize(
+    ("sms_cap", "whatsapp_cap"),
+    [(None, None), (-1, -1), (0, 0), (100, 250)],
+)
+def test_device_policy_alert_caps_round_trip(
+    sms_cap: int | None, whatsapp_cap: int | None
+) -> None:
+    payload: dict[str, object] = {
+        "available": True,
+        "enabled": True,
+        "policy_version": 3,
+        "tier": "B",
+        "relay_b_enabled": True,
+        "relay_c_enabled": False,
+        "cloud_llm_enabled": True,
+        "valid_until": 9999,
+        "issued_at": 1000,
+        "is_expired": False,
+        "alert_sms_monthly_cap": sms_cap,
+        "alert_whatsapp_monthly_cap": whatsapp_cap,
+    }
+
+    assert DevicePolicyState.from_dict(payload).to_dict() == payload
+
+
+@pytest.mark.parametrize("cap", [-2, -100, True, 1.5, "10"])
+def test_device_policy_alert_caps_reject_invalid_values(cap: object) -> None:
+    payload: dict[str, object] = {
+        "available": True,
+        "enabled": True,
+        "policy_version": 3,
+        "tier": "B",
+        "relay_b_enabled": True,
+        "relay_c_enabled": False,
+        "cloud_llm_enabled": True,
+        "valid_until": 9999,
+        "issued_at": 1000,
+        "is_expired": False,
+        "alert_sms_monthly_cap": cap,
+        "alert_whatsapp_monthly_cap": 0,
+    }
+
+    with pytest.raises(ValueError, match="alert_sms_monthly_cap"):
+        DevicePolicyState.from_dict(payload)
+
+    valid = DevicePolicyState.from_dict({**payload, "alert_sms_monthly_cap": 0})
+    with pytest.raises(ValueError, match="alert_sms_monthly_cap"):
+        replace(valid, alert_sms_monthly_cap=cast(int, cap))
 
 
 def test_alert_outbox_state_round_trip() -> None:

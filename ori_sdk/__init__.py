@@ -77,6 +77,20 @@ from ori_sdk.skill_package import (
     SkillYamlNormaliser,
     Trigger,
 )
+from ori_sdk.telemetry import (
+    JSON_SAFE_INT_MAX,
+    RUNTIME_TELEMETRY_SCHEMA_VERSION,
+    RuntimeTelemetryBatch,
+    RuntimeTelemetryEvent,
+    RuntimeTelemetryEventType,
+    RuntimeTelemetryReading,
+    TelemetryCanonicalizationError,
+    TelemetryJsonObject,
+    TelemetryJsonScalar,
+    TelemetryJsonValue,
+    canonical_telemetry_bytes,
+    telemetry_hmac_sha256,
+)
 from ori_sdk.validation import validate_skill_metadata, validate_skill_metadata_file
 
 __all__ = [
@@ -149,6 +163,19 @@ __all__ = [
     "SkillPackage",
     "SkillYamlNormaliser",
     "Trigger",
+    # direct runtime telemetry
+    "JSON_SAFE_INT_MAX",
+    "RUNTIME_TELEMETRY_SCHEMA_VERSION",
+    "RuntimeTelemetryBatch",
+    "RuntimeTelemetryEvent",
+    "RuntimeTelemetryEventType",
+    "RuntimeTelemetryReading",
+    "TelemetryCanonicalizationError",
+    "TelemetryJsonObject",
+    "TelemetryJsonScalar",
+    "TelemetryJsonValue",
+    "canonical_telemetry_bytes",
+    "telemetry_hmac_sha256",
     # validation
     "validate_skill_metadata",
     "validate_skill_metadata_file",

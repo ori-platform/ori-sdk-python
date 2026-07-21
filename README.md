@@ -12,6 +12,8 @@ This repository intentionally ships a thin, stable v1 bootstrap surface:
   [`skills-package/v1`](https://github.com/ori-platform/ori-specs/blob/main/skills-package/v1.md)
   contract and runtime loader invariants.
 - Gateway topic + request/response helper utilities with `request_id` integrity.
+- Product-neutral direct runtime telemetry models with specs-aligned canonical
+  JSON bytes and pure HMAC primitives.
 
 Out of scope for this bootstrap:
 
@@ -82,6 +84,26 @@ decryption. They do not model HMAC or AES-GCM envelopes, open MQTT connections,
 or grant mutation or actuation authority. Runtime exports are read-only, and
 Tier C enrichment remains advisory.
 
+## Direct Runtime Telemetry
+
+```python
+from ori_sdk import (
+    RuntimeTelemetryBatch,
+    canonical_telemetry_bytes,
+    telemetry_hmac_sha256,
+)
+
+batch = RuntimeTelemetryBatch.from_dict(payload)
+body = canonical_telemetry_bytes(batch)
+signature_hex = telemetry_hmac_sha256(api_key, timestamp_ms, body)
+```
+
+The telemetry models mirror the observational `runtime.telemetry.v1` body and
+its cross-language canonical byte contract. The HMAC helper is a pure signing
+primitive: it does not load credentials, build authorization headers, select an
+endpoint, or send data. Telemetry remains product-neutral and grants no runtime
+mutation or actuation authority.
+
 ## Compatibility
 
 - Python `3.11` and `3.12`
@@ -90,7 +112,7 @@ Tier C enrichment remains advisory.
 
 | SDK version | Runtime baseline | Specs baseline |
 |---|---|---|
-| `0.1.x` | [`ori-runtime`](https://github.com/ori-platform/ori-runtime) `v2.0.0+` health, gateway, and skill-loader contracts | [`ori-specs`](https://github.com/ori-platform/ori-specs) `v1` |
+| `0.1.x` | [`ori-runtime`](https://github.com/ori-platform/ori-runtime) `v2.0.0+` health, gateway, telemetry, and skill-loader contracts | [`ori-specs`](https://github.com/ori-platform/ori-specs) `v1` |
 
 The SDK mirrors contracts from [`ori-specs`](https://github.com/ori-platform/ori-specs) and must not import from [`ori-runtime`](https://github.com/ori-platform/ori-runtime) internals.
 Skill package validation targets runtime `v2.0.0+`. Legacy v0.9 packages using
