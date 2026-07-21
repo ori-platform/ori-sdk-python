@@ -168,6 +168,8 @@ class DevicePolicyState:
 
     When ``available`` is ``False`` all optional fields are ``None``.
     The ``enabled`` flag reflects the runtime config regardless of availability.
+    Alert caps accept ``None`` (implicit unlimited), ``-1`` (explicit unlimited),
+    or a non-negative monthly delivery limit.
     """
 
     available: bool
@@ -180,6 +182,21 @@ class DevicePolicyState:
     valid_until: int | None
     issued_at: int | None
     is_expired: bool | None
+    alert_sms_monthly_cap: int | None = None
+    alert_whatsapp_monthly_cap: int | None = None
+
+    def __post_init__(self) -> None:
+        for field_name, cap in (
+            ("alert_sms_monthly_cap", self.alert_sms_monthly_cap),
+            ("alert_whatsapp_monthly_cap", self.alert_whatsapp_monthly_cap),
+        ):
+            if cap is not None:
+                if isinstance(cap, bool) or not isinstance(cap, int):
+                    raise ValueError(f"device_policy.{field_name} must be an integer")
+                if cap < -1:
+                    raise ValueError(
+                        f"device_policy.{field_name} must be null, -1, or non-negative"
+                    )
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> DevicePolicyState:
@@ -208,6 +225,14 @@ class DevicePolicyState:
             is_expired=_as_optional_bool(
                 payload.get("is_expired"), "device_policy.is_expired"
             ),
+            alert_sms_monthly_cap=_as_optional_int(
+                payload.get("alert_sms_monthly_cap"),
+                "device_policy.alert_sms_monthly_cap",
+            ),
+            alert_whatsapp_monthly_cap=_as_optional_int(
+                payload.get("alert_whatsapp_monthly_cap"),
+                "device_policy.alert_whatsapp_monthly_cap",
+            ),
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -222,6 +247,8 @@ class DevicePolicyState:
             "valid_until": self.valid_until,
             "issued_at": self.issued_at,
             "is_expired": self.is_expired,
+            "alert_sms_monthly_cap": self.alert_sms_monthly_cap,
+            "alert_whatsapp_monthly_cap": self.alert_whatsapp_monthly_cap,
         }
 
 
