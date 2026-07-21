@@ -14,6 +14,9 @@ This repository intentionally ships a thin, stable v1 bootstrap surface:
 - Gateway topic + request/response helper utilities with `request_id` integrity.
 - Product-neutral direct runtime telemetry models with specs-aligned canonical
   JSON bytes and pure HMAC primitives.
+- Immutable firmware Layer 1 capability, telemetry, heartbeat, fault, and
+  provisioning models with canonical Ed25519 verification and pure freshness
+  checks.
 
 Out of scope for this bootstrap:
 
@@ -103,6 +106,30 @@ its cross-language canonical byte contract. The HMAC helper is a pure signing
 primitive: it does not load credentials, build authorization headers, select an
 endpoint, or send data. Telemetry remains product-neutral and grants no runtime
 mutation or actuation authority.
+
+## Firmware Layer 1 Telemetry
+
+```python
+from ori_sdk import (
+    FirmwareProvisioningAnchor,
+    SignedFirmwareCapabilityManifest,
+    canonical_firmware_json_bytes,
+    verify_firmware_manifest,
+)
+
+anchor = FirmwareProvisioningAnchor.from_dict(anchor_payload)
+message = SignedFirmwareCapabilityManifest.from_dict(manifest_payload)
+manifest_hash = verify_firmware_manifest(message, anchor)
+signed_bytes = canonical_firmware_json_bytes(message.manifest)
+```
+
+These models mirror `firmware-telemetry/v1` and keep measurement telemetry,
+zero-reading heartbeats, and signed fault evidence as distinct types. The
+verification and freshness helpers are pure: callers retain responsibility for
+durably storing high-water marks and for using ori-runtime's
+`FirmwareTelemetryGate` when ingesting readings. Faults and local firmware
+interlocks remain evidence and defense-in-depth; they do not grant Tier C or
+Tier D action authority.
 
 ## Compatibility
 
