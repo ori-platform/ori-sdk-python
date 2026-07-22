@@ -38,7 +38,17 @@ FirmwareTransport = Literal["mqtt", "uart", "rs485"]
 FirmwareChannelProtocol = Literal[
     "adc", "gpio", "i2c", "uart", "modbus_rtu", "rs232", "pulse", "one_wire"
 ]
+FirmwareAction = Literal["relay_open", "relay_close"]
 FirmwareActionAuthority = Literal["local_interlock_only", "runtime_commanded"]
+FirmwareCommandRejectionDetail = Literal[
+    "malformed",
+    "wrong_device",
+    "bad_signature",
+    "replayed",
+    "capability_mismatch",
+    "unknown_action",
+    "storage_failure",
+]
 FirmwareFaultCode = Literal[
     "command_rejected",
     "interlock_input_fault",
@@ -74,7 +84,19 @@ _TRANSPORTS = frozenset({"mqtt", "uart", "rs485"})
 _CHANNEL_PROTOCOLS = frozenset(
     {"adc", "gpio", "i2c", "uart", "modbus_rtu", "rs232", "pulse", "one_wire"}
 )
+_FIRMWARE_ACTIONS = frozenset({"relay_open", "relay_close"})
 _ACTION_AUTHORITIES = frozenset({"local_interlock_only", "runtime_commanded"})
+_COMMAND_REJECTION_DETAILS = frozenset(
+    {
+        "malformed",
+        "wrong_device",
+        "bad_signature",
+        "replayed",
+        "capability_mismatch",
+        "unknown_action",
+        "storage_failure",
+    }
+)
 _FAULT_CODES = frozenset(
     {
         "command_rejected",
@@ -459,12 +481,16 @@ class FirmwareManifestChannel:
 class FirmwareManifestAction:
     """A firmware capability, never a runtime Tier C or Tier D grant."""
 
-    action: str
+    action: FirmwareAction
     channel: str
     authority: FirmwareActionAuthority
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "action", _require_string(self.action, "action"))
+        object.__setattr__(
+            self,
+            "action",
+            _require_literal(self.action, _FIRMWARE_ACTIONS, "firmware action"),
+        )
         object.__setattr__(self, "channel", _require_string(self.channel, "channel"))
         object.__setattr__(
             self,
@@ -475,11 +501,14 @@ class FirmwareManifestAction:
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> FirmwareManifestAction:
         _require_exact_fields(payload, _MANIFEST_ACTION_FIELDS, "manifest action")
+        action = _require_literal(
+            payload.get("action"), _FIRMWARE_ACTIONS, "firmware action"
+        )
         authority = _require_literal(
             payload.get("authority"), _ACTION_AUTHORITIES, "authority"
         )
         return cls(
-            action=_require_string(payload.get("action"), "action"),
+            action=cast(FirmwareAction, action),
             channel=_require_string(payload.get("channel"), "channel"),
             authority=cast(FirmwareActionAuthority, authority),
         )
@@ -498,20 +527,27 @@ class FirmwareManifestInterlock:
 
     name: str
     channel: str
-    action: str
+    action: FirmwareAction
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "name", _require_string(self.name, "name"))
         object.__setattr__(self, "channel", _require_string(self.channel, "channel"))
-        object.__setattr__(self, "action", _require_string(self.action, "action"))
+        object.__setattr__(
+            self,
+            "action",
+            _require_literal(self.action, _FIRMWARE_ACTIONS, "firmware action"),
+        )
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> FirmwareManifestInterlock:
         _require_exact_fields(payload, _MANIFEST_INTERLOCK_FIELDS, "manifest interlock")
+        action = _require_literal(
+            payload.get("action"), _FIRMWARE_ACTIONS, "firmware action"
+        )
         return cls(
             name=_require_string(payload.get("name"), "name"),
             channel=_require_string(payload.get("channel"), "channel"),
-            action=_require_string(payload.get("action"), "action"),
+            action=cast(FirmwareAction, action),
         )
 
     def to_dict(self) -> dict[str, object]:
@@ -1145,13 +1181,19 @@ class FirmwareFaultEvent:
             "device_uptime_ms",
             _require_non_negative_int(self.device_uptime_ms, "device_uptime_ms"),
         )
-        object.__setattr__(
-            self, "code", _require_literal(self.code, _FAULT_CODES, "fault code")
-        )
+        code = _require_literal(self.code, _FAULT_CODES, "fault code")
+        object.__setattr__(self, "code", code)
         object.__setattr__(
             self, "subject", _require_fault_token(self.subject, "subject")
         )
-        object.__setattr__(self, "detail", _require_fault_token(self.detail, "detail"))
+        detail = _require_fault_token(self.detail, "detail")
+        if code == "command_rejected":
+            detail = _require_literal(
+                detail,
+                _COMMAND_REJECTION_DETAILS,
+                "command rejection detail",
+            )
+        object.__setattr__(self, "detail", detail)
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> FirmwareFaultEvent:

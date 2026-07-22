@@ -3,9 +3,9 @@
 
 """Cross-language contract tests for firmware telemetry Layer 1.
 
-The committed vectors are published by ori-edge-firmware and mirrored by
-ori-runtime. Any canonical-byte or signature divergence is a cross-repository
-contract break, not an SDK-local serialization choice.
+The committed vectors are published by ori-edge-firmware. Their source commit
+and whole-file hash are pinned below; canonical-byte or signature divergence is
+a cross-repository contract break, not an SDK-local serialization choice.
 """
 
 from __future__ import annotations
@@ -27,8 +27,10 @@ from ori_sdk.firmware_telemetry import (
     FIRMWARE_FAULT_TOKEN_MAX_LENGTH,
     FIRMWARE_JSON_SAFE_INT_MAX,
     FIRMWARE_SIGNATURE_PREFIX,
+    FirmwareAction,
     FirmwareActionAuthority,
     FirmwareCapabilityManifest,
+    FirmwareCommandRejectionDetail,
     FirmwareFaultCode,
     FirmwareFaultEvent,
     FirmwareFreshnessState,
@@ -36,6 +38,7 @@ from ori_sdk.firmware_telemetry import (
     FirmwareHeartbeatEnvelope,
     FirmwareManifestAction,
     FirmwareManifestChannel,
+    FirmwareManifestInterlock,
     FirmwareProvisioningAnchor,
     FirmwareTelemetryEnvelope,
     FirmwareTelemetryError,
@@ -59,6 +62,14 @@ from ori_sdk.firmware_telemetry import (
 FIXTURES = Path(__file__).parent / "fixtures"
 LAYER1_PATH = FIXTURES / "firmware_layer1_vectors.json"
 FAULT_PATH = FIXTURES / "firmware_fault_vectors.json"
+FIRMWARE_LAYER1_SOURCE = (
+    "ori-platform/ori-edge-firmware@"
+    "66b6fd2f8fa5c3dca2a3da5977c7b050ca5e0b5b:"
+    "test/golden/layer1_vectors.json"
+)
+FIRMWARE_LAYER1_SHA256 = (
+    "72e5ed34bd70eee82ad0e9982adf0ff3729e8b9b291cb3d5ab3b16da82ca2359"
+)
 
 
 def _load_object(path: Path) -> dict[str, object]:
@@ -146,7 +157,10 @@ def _resign_telemetry(envelope: FirmwareTelemetryEnvelope) -> SignedFirmwareTele
 
 def test_firmware_telemetry_api_is_publicly_exported() -> None:
     expected = {
+        "FirmwareAction",
+        "FirmwareActionAuthority",
         "FirmwareCapabilityManifest",
+        "FirmwareCommandRejectionDetail",
         "FirmwareFaultEvent",
         "FirmwareFreshnessState",
         "FirmwareFreshnessVerdict",
@@ -175,6 +189,14 @@ def test_firmware_telemetry_api_is_publicly_exported() -> None:
     assert expected <= set(ori_sdk.__all__)
     assert ori_sdk.FirmwareCapabilityManifest is FirmwareCapabilityManifest
     assert ori_sdk.verify_firmware_telemetry is verify_firmware_telemetry
+
+
+def test_layer1_fixture_is_byte_identical_to_pinned_firmware_source() -> None:
+    actual_sha256 = hashlib.sha256(LAYER1_PATH.read_bytes()).hexdigest()
+
+    assert actual_sha256 == FIRMWARE_LAYER1_SHA256, (
+        f"Layer 1 fixture drifted from {FIRMWARE_LAYER1_SOURCE}"
+    )
 
 
 @pytest.mark.parametrize("case_name", list(LAYER1_CASES))
@@ -642,6 +664,55 @@ def test_manifest_action_authority_cannot_claim_runtime_tiers() -> None:
         SignedFirmwareCapabilityManifest.from_dict(payload)
 
 
+@pytest.mark.parametrize("action", ["relay_open", "relay_close"])
+def test_manifest_action_vocabulary_accepts_both_actions(
+    action: FirmwareAction,
+) -> None:
+    capability = FirmwareManifestAction(
+        action=action,
+        channel="relay0",
+        authority="runtime_commanded",
+    )
+    interlock = FirmwareManifestInterlock(
+        name="local_overcurrent_interlock",
+        channel="ch0",
+        action=action,
+    )
+
+    assert capability.action == action
+    assert interlock.action == action
+
+
+@pytest.mark.parametrize("action", ["", "relay_toggle", "tier_d_cutoff"])
+def test_manifest_action_vocabulary_is_closed_for_constructors_and_parsers(
+    action: str,
+) -> None:
+    with pytest.raises(FirmwareTelemetryError, match="firmware action"):
+        FirmwareManifestAction(
+            action=cast(FirmwareAction, action),
+            channel="relay0",
+            authority="runtime_commanded",
+        )
+    with pytest.raises(FirmwareTelemetryError, match="firmware action"):
+        FirmwareManifestInterlock(
+            name="local_overcurrent_interlock",
+            channel="ch0",
+            action=cast(FirmwareAction, action),
+        )
+
+    capability_payload = _manifest("manifest_full_sealed").to_dict()
+    capabilities = cast(list[dict[str, object]], capability_payload["actions"])
+    capabilities[0]["action"] = action
+    with pytest.raises(FirmwareTelemetryError, match="firmware action"):
+        FirmwareCapabilityManifest.from_dict(capability_payload)
+
+    interlock_payload = _manifest("manifest_full_sealed").to_dict()
+    interlocks = cast(list[dict[str, object]], interlock_payload["interlocks"])
+    interlocks[0]["action"] = action
+    with pytest.raises(FirmwareTelemetryError, match="firmware action"):
+        FirmwareCapabilityManifest.from_dict(interlock_payload)
+
+
 def test_production_posture_requires_security_booleans() -> None:
     manifest = _manifest("manifest_full_sealed")
 
@@ -712,6 +783,54 @@ def test_fault_code_is_closed_for_parser_and_constructor() -> None:
         FirmwareFaultEvent.from_dict(payload)
     with pytest.raises(FirmwareTelemetryError):
         replace(fault, code=cast(FirmwareFaultCode, "made_up_fault"))
+
+
+@pytest.mark.parametrize(
+    "detail",
+    [
+        "malformed",
+        "wrong_device",
+        "bad_signature",
+        "replayed",
+        "capability_mismatch",
+        "unknown_action",
+        "storage_failure",
+    ],
+)
+def test_command_rejection_accepts_every_contract_verdict(
+    detail: FirmwareCommandRejectionDetail,
+) -> None:
+    fault = _signed_fault("fault_command_rejected").fault
+
+    assert replace(fault, detail=detail).detail == detail
+    payload = fault.to_dict()
+    payload["detail"] = detail
+    assert FirmwareFaultEvent.from_dict(payload).detail == detail
+
+
+@pytest.mark.parametrize("detail", ["", "invented_verdict"])
+def test_command_rejection_detail_is_closed_for_constructor_and_parser(
+    detail: str,
+) -> None:
+    fault = _signed_fault("fault_command_rejected").fault
+
+    with pytest.raises(FirmwareTelemetryError, match="command rejection detail"):
+        replace(fault, detail=detail)
+    payload = fault.to_dict()
+    payload["detail"] = detail
+    with pytest.raises(FirmwareTelemetryError, match="command rejection detail"):
+        FirmwareFaultEvent.from_dict(payload)
+
+
+@pytest.mark.parametrize("detail", ["", "vendor_defined_detail"])
+def test_non_command_fault_detail_remains_open_and_may_be_empty(
+    detail: str,
+) -> None:
+    fault = _signed_fault("fault_command_rejected").fault
+    sensor_fault = replace(fault, code="sensor_fault", detail=detail)
+
+    assert sensor_fault.detail == detail
+    assert FirmwareFaultEvent.from_dict(sensor_fault.to_dict()) == sensor_fault
 
 
 def test_models_are_frozen_and_nested_collections_are_tuples() -> None:
