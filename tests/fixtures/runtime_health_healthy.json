@@ -2,20 +2,20 @@
   "schema_version": 1,
   "ok": true,
   "health": {
-    "device_id": "site-a",
+    "device_id": "site-healthy",
     "uptime_s": 12.5,
     "health_socket_path": "/run/ori/health.sock",
     "capability_posture": {
       "available": true,
       "sms_available": true,
-      "whatsapp_available": false,
-      "gateway_reachable": false,
+      "whatsapp_available": true,
+      "gateway_reachable": true,
       "local_slm_loaded": true,
       "relay_connected": true,
       "internet_available": true,
       "checked_at_ms": 1,
       "expires_at_ms": 2,
-      "gateway_last_heartbeat_ms": null
+      "gateway_last_heartbeat_ms": 1
     },
     "gateway_broker_posture": {
       "available": true,
@@ -47,16 +47,17 @@
     ],
     "last_alert_timestamps": {
       "by_channel": {
-        "sms": 123
+        "sms": 123,
+        "whatsapp": 123
       },
       "by_trigger": {
         "dangerous_overcurrent": 123
       }
     },
     "alert_outbox": {
-      "backlog_count": 1,
-      "oldest_queued_original_ts": 100,
-      "oldest_queued_age_ms": 50,
+      "backlog_count": 0,
+      "oldest_queued_original_ts": null,
+      "oldest_queued_age_ms": null,
       "retry_interval_minutes": 0.5,
       "max_non_tier_d_attempts": 10,
       "tier_d_critical_warning_threshold": 3,
@@ -68,11 +69,13 @@
       "policy_version": 1,
       "tier": "B",
       "relay_b_enabled": true,
-      "relay_c_enabled": false,
+      "relay_c_enabled": true,
       "cloud_llm_enabled": true,
       "valid_until": 9999999999,
       "issued_at": 1000000000,
-      "is_expired": false
+      "is_expired": false,
+      "alert_sms_monthly_cap": null,
+      "alert_whatsapp_monthly_cap": null
     },
     "remote_command_lockout": {
       "enforcement_enabled": true,
@@ -90,7 +93,7 @@
           "rejection_count": 0,
           "window_ms": 3600000,
           "checked_at_ms": 123,
-          "reason": "clean",
+          "reason": "below_threshold",
           "stale": false
         }
       ]

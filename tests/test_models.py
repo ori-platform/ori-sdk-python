@@ -231,7 +231,7 @@ def test_evidence_state_round_trip() -> None:
         "available": True,
         "public_key_hex": "ab" * 32,
         "artifact_version": "0.2.0",
-        "protocol_version": "1",
+        "protocol_version": "evidence.v1",
         "action_event_type": "SAFETY_ACTION_EXECUTED",
         "chain_head_hash": "head-1",
         "pending_export_count": 0,
