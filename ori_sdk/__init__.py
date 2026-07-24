@@ -8,6 +8,7 @@ from ori_sdk.errors import (
     HealthClientError,
     OriSDKError,
     SkillMetadataValidationError,
+    SkillSigningError,
 )
 from ori_sdk.firmware_telemetry import (
     FIRMWARE_DEVICE_ID_MAX_LENGTH,
@@ -111,6 +112,17 @@ from ori_sdk.models import (
     HealthStatus,
     SensorStatus,
 )
+from ori_sdk.signing import (
+    ARTIFACT_SIGNATURE_SCHEMA,
+    BUNDLED_SENTINEL,
+    SIGNATURE_PREFIX,
+    ArtifactSignatureMetadata,
+    canonical_manifest_bytes,
+    sign_artifact,
+    sign_manifest,
+    verify_artifact_signature,
+    verify_manifest_signature,
+)
 from ori_sdk.skill_package import (
     ActionRef,
     ActionsSection,
@@ -144,6 +156,7 @@ __all__ = [
     "HealthClientError",
     "OriSDKError",
     "SkillMetadataValidationError",
+    "SkillSigningError",
     # firmware telemetry
     "FIRMWARE_DEVICE_ID_MAX_LENGTH",
     "FIRMWARE_FAULT_TOKEN_MAX_LENGTH",
@@ -224,6 +237,16 @@ __all__ = [
     "TierCEnrichmentResponse",
     # health client
     "RuntimeHealthClient",
+    # skill signing
+    "ARTIFACT_SIGNATURE_SCHEMA",
+    "BUNDLED_SENTINEL",
+    "SIGNATURE_PREFIX",
+    "ArtifactSignatureMetadata",
+    "canonical_manifest_bytes",
+    "sign_artifact",
+    "sign_manifest",
+    "verify_artifact_signature",
+    "verify_manifest_signature",
     # helpers
     "PostureReport",
     "StalenessReport",
