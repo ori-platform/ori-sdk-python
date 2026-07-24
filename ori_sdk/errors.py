@@ -27,6 +27,17 @@ ORI_SDK_PROPOSAL_ID_MISMATCH = "ORI-SDK-021"
 ORI_SDK_DEVICE_ID_MISMATCH = "ORI-SDK-022"
 ORI_SDK_EXPORT_TYPE_MISMATCH = "ORI-SDK-023"
 
+# ── Skill signing error codes (ORI-SDK-03x) ──────────────────────────────────
+ORI_SDK_CRYPTO_UNAVAILABLE = "ORI-SDK-030"
+ORI_SDK_INVALID_SIGNATURE_FORMAT = "ORI-SDK-031"
+ORI_SDK_INVALID_PUBLIC_KEY = "ORI-SDK-032"
+ORI_SDK_INVALID_ARTIFACT_SIGNATURE_METADATA = "ORI-SDK-033"
+ORI_SDK_ARTIFACT_DIGEST_MISMATCH = "ORI-SDK-034"
+ORI_SDK_SIGNATURE_VERIFICATION_FAILED = "ORI-SDK-035"
+ORI_SDK_BUNDLED_SIGNATURE_NOT_ALLOWED = "ORI-SDK-036"
+ORI_SDK_INVALID_MANIFEST = "ORI-SDK-037"
+ORI_SDK_INVALID_PRIVATE_KEY = "ORI-SDK-038"
+
 
 class OriSDKError(Exception):
     """Base class for all ori-sdk-python errors.
@@ -54,3 +65,7 @@ class SkillMetadataValidationError(OriSDKError):
 
 class GatewayContractError(OriSDKError):
     """Raised when a gateway response violates the request/response contract."""
+
+
+class SkillSigningError(OriSDKError):
+    """Raised when skill signing input or verification fails closed."""
