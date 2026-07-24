@@ -1,0 +1,145 @@
+{
+  "schema_version": 1,
+  "ok": true,
+  "health": {
+    "device_id": "site-degraded",
+    "uptime_s": 42.0,
+    "health_socket_path": "/tmp/ori-health.sock",
+    "capability_posture": {
+      "available": true,
+      "sms_available": false,
+      "whatsapp_available": false,
+      "gateway_reachable": false,
+      "local_slm_loaded": false,
+      "relay_connected": false,
+      "internet_available": false,
+      "checked_at_ms": 9000,
+      "expires_at_ms": 39000,
+      "gateway_last_heartbeat_ms": null
+    },
+    "gateway_broker_posture": {
+      "available": true,
+      "gateway_enabled": true,
+      "deployment_check": "required",
+      "anonymous_access": "unknown",
+      "acl_policy": "unknown",
+      "require_credentials": true,
+      "credentials_configured": false,
+      "requires_acl_hardening": true
+    },
+    "state_store_encryption": {
+      "available": true,
+      "mode": "filesystem_required",
+      "satisfied": false,
+      "marker_configured": false,
+      "path_prefix_configured": false
+    },
+    "sensors": [
+      {
+        "id": "stale-current",
+        "type": "current_clamp",
+        "protocol": "i2c",
+        "poll_interval_ms": 1000,
+        "connected": true,
+        "last_seen_ms": 100,
+        "stale": true
+      },
+      {
+        "id": "missing-temperature",
+        "type": "temperature",
+        "protocol": "modbus",
+        "poll_interval_ms": 5000,
+        "connected": false,
+        "last_seen_ms": null,
+        "stale": false
+      },
+      {
+        "id": "future-voltage",
+        "type": "voltage",
+        "protocol": "mqtt",
+        "poll_interval_ms": 1000,
+        "connected": true,
+        "last_seen_ms": 12000,
+        "stale": false
+      }
+    ],
+    "last_alert_timestamps": {
+      "by_channel": {},
+      "by_trigger": {}
+    },
+    "alert_outbox": {
+      "backlog_count": 3,
+      "oldest_queued_original_ts": 1000,
+      "oldest_queued_age_ms": 9000,
+      "retry_interval_minutes": 0.5,
+      "max_non_tier_d_attempts": 10,
+      "tier_d_critical_warning_threshold": 3,
+      "batch_size": 50
+    },
+    "device_policy": {
+      "available": true,
+      "enabled": true,
+      "policy_version": 7,
+      "tier": "B",
+      "relay_b_enabled": false,
+      "relay_c_enabled": false,
+      "cloud_llm_enabled": false,
+      "valid_until": 1,
+      "issued_at": 0,
+      "is_expired": true,
+      "alert_sms_monthly_cap": 0,
+      "alert_whatsapp_monthly_cap": 0
+    },
+    "remote_command_lockout": {
+      "enforcement_enabled": false,
+      "risk_window_ms": 3600000,
+      "stale_after_ms": 3600000,
+      "incident_sender_limit": 50,
+      "senders": [
+        {
+          "channel": "sms",
+          "from_number": "+2348000000001",
+          "risk_level": "elevated",
+          "locked_out": false,
+          "enforcement_enabled": false,
+          "incident_count": 1,
+          "rejection_count": 6,
+          "window_ms": 3600000,
+          "checked_at_ms": 9000,
+          "reason": "recent_security_incident",
+          "stale": false
+        },
+        {
+          "channel": "whatsapp",
+          "from_number": "whatsapp:+2348000000002",
+          "risk_level": "critical",
+          "locked_out": true,
+          "enforcement_enabled": true,
+          "incident_count": 3,
+          "rejection_count": 18,
+          "window_ms": 3600000,
+          "checked_at_ms": 0,
+          "reason": "critical_incident_volume",
+          "stale": true
+        }
+      ]
+    },
+    "evidence": {
+      "enabled": true,
+      "available": true,
+      "public_key_hex": "cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+      "artifact_version": "0.2.0",
+      "protocol_version": "evidence.v1",
+      "action_event_type": "SAFETY_ACTION_EXECUTED",
+      "chain_head_hash": "chain-head-degraded",
+      "pending_export_count": 2,
+      "last_attested_action_id": 41,
+      "attestation_gap_count": 2,
+      "status_counts": {
+        "signed": 4,
+        "pending": 1,
+        "failed": 1
+      }
+    }
+  }
+}

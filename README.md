@@ -49,6 +49,41 @@ else:
     print(response.error)
 ```
 
+## Extended Health Helpers
+
+```python
+from ori_sdk import (
+    RuntimeHealthClient,
+    alert_channel_summary,
+    evidence_summary,
+    runtime_posture_summary,
+    sensor_freshness_delta,
+    tier_capability_summary,
+)
+
+response = RuntimeHealthClient().get_health()
+if not response.ok or response.health is None:
+    raise RuntimeError("runtime health is unavailable")
+
+status = response.health
+freshness = sensor_freshness_delta(status)
+alerts = alert_channel_summary(status)
+tiers = tier_capability_summary(status)
+evidence = evidence_summary(status)
+posture = runtime_posture_summary(status)
+```
+
+These helpers consume typed `HealthStatus` snapshots and return plain
+dictionaries described by exported `TypedDict` result types. They are read-only
+diagnostics: tier authority remains a runtime concern, alert availability does
+not prove provider delivery, and broad posture summaries omit remote-command
+sender identities. Gateway and Local SLM state is reasoning/enrichment posture,
+not physical-action authority; cloud providers remain gateway backends.
+
+`posture_interpretation()` is deprecated because its original tier mapping
+predates the runtime v2 authority model. Its signature, `PostureReport` return
+type, and behavior remain available for compatibility.
+
 ## Skill Package Example
 
 ```python
