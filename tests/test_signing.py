@@ -20,6 +20,7 @@ from ori_sdk.errors import (
     ORI_SDK_BUNDLED_SIGNATURE_NOT_ALLOWED,
     ORI_SDK_INVALID_ARTIFACT_SIGNATURE_METADATA,
     ORI_SDK_INVALID_MANIFEST,
+    ORI_SDK_INVALID_PRIVATE_KEY,
     ORI_SDK_SIGNATURE_VERIFICATION_FAILED,
     SkillSigningError,
 )
@@ -84,6 +85,12 @@ def test_artifact_vector_digest_and_signature() -> None:
 def test_signing_round_trips_match_shared_vectors() -> None:
     assert sign_manifest(PARSED_SKILL, PRIVATE_SEED) == MANIFEST_PROFILE["signature"]
     assert sign_artifact(ARTIFACT_BYTES, PRIVATE_SEED) == ARTIFACT_METADATA
+
+
+def test_signing_rejects_invalid_private_key_with_private_key_code() -> None:
+    with pytest.raises(SkillSigningError) as error:
+        sign_artifact(ARTIFACT_BYTES, b"short")
+    assert error.value.code == ORI_SDK_INVALID_PRIVATE_KEY
 
 
 def test_profiles_cannot_be_substituted() -> None:

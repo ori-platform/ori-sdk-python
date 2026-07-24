@@ -29,6 +29,7 @@ from ori_sdk.errors import (
     ORI_SDK_BUNDLED_SIGNATURE_NOT_ALLOWED,
     ORI_SDK_INVALID_ARTIFACT_SIGNATURE_METADATA,
     ORI_SDK_INVALID_MANIFEST,
+    ORI_SDK_INVALID_PRIVATE_KEY,
     ORI_SDK_INVALID_PUBLIC_KEY,
     ORI_SDK_INVALID_SIGNATURE_FORMAT,
     ORI_SDK_SIGNATURE_VERIFICATION_FAILED,
@@ -115,14 +116,14 @@ def _load_private_key(private_key_bytes: bytes) -> Ed25519PrivateKey:
     if len(private_key_bytes) != _PRIVATE_KEY_LENGTH:
         raise SkillSigningError(
             "private key seed must be exactly 32 bytes",
-            code=ORI_SDK_INVALID_PUBLIC_KEY,
+            code=ORI_SDK_INVALID_PRIVATE_KEY,
         )
     try:
         return Ed25519PrivateKey.from_private_bytes(private_key_bytes)
     except ValueError as exc:
         raise SkillSigningError(
             "private key seed is not valid Ed25519 material",
-            code=ORI_SDK_INVALID_PUBLIC_KEY,
+            code=ORI_SDK_INVALID_PRIVATE_KEY,
         ) from exc
 
 
@@ -182,7 +183,11 @@ def verify_artifact_signature(
     metadata: Mapping[str, object],
     public_key_b64: str,
 ) -> None:
-    """Verify detached metadata and signature over exact artifact bytes."""
+    """Verify detached metadata and signature over exact artifact bytes.
+
+    ``metadata`` must already be parsed. Callers that originate it as JSON are
+    responsible for rejecting duplicate object fields during parsing.
+    """
 
     parsed = _parse_artifact_metadata(metadata)
     actual_digest = ARTIFACT_DIGEST_PREFIX + hashlib.sha256(artifact_bytes).hexdigest()
