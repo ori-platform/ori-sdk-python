@@ -92,11 +92,24 @@ from ori_sdk.gateway_models import (
 )
 from ori_sdk.health import RuntimeHealthClient
 from ori_sdk.helpers import (
+    AlertChannelSummary,
+    EvidenceSummary,
     PostureReport,
+    RemoteCommandLockoutAggregate,
+    RuntimePostureSummary,
+    SensorFreshness,
+    SensorFreshnessSummary,
     StalenessReport,
+    TierCapabilitySummary,
+    TierExecutionState,
+    alert_channel_summary,
     error_code_from_health_failure,
+    evidence_summary,
     posture_interpretation,
+    runtime_posture_summary,
+    sensor_freshness_delta,
     staleness_summary,
+    tier_capability_summary,
 )
 from ori_sdk.models import (
     AlertTimestamps,
@@ -225,11 +238,24 @@ __all__ = [
     # health client
     "RuntimeHealthClient",
     # helpers
+    "AlertChannelSummary",
+    "EvidenceSummary",
     "PostureReport",
+    "RemoteCommandLockoutAggregate",
+    "RuntimePostureSummary",
+    "SensorFreshness",
+    "SensorFreshnessSummary",
     "StalenessReport",
+    "TierCapabilitySummary",
+    "TierExecutionState",
+    "alert_channel_summary",
+    "evidence_summary",
     "error_code_from_health_failure",
     "posture_interpretation",
+    "runtime_posture_summary",
+    "sensor_freshness_delta",
     "staleness_summary",
+    "tier_capability_summary",
     # models
     "AlertTimestamps",
     "CapabilityPosture",
