@@ -24,6 +24,26 @@ def test_runtime_health_success_fixture_normalizes_omitted_policy_caps() -> None
     assert parsed.to_dict() == expected
 
 
+def test_runtime_health_degraded_fixture_round_trips() -> None:
+    payload = json.loads((FIXTURES / "runtime_health_degraded.json").read_text())
+    parsed = HealthResponse.from_dict(payload)
+    assert parsed.to_dict() == payload
+
+
+def test_runtime_health_healthy_fixture_round_trips() -> None:
+    payload = json.loads((FIXTURES / "runtime_health_healthy.json").read_text())
+    parsed = HealthResponse.from_dict(payload)
+    assert parsed.to_dict() == payload
+
+
+def test_runtime_health_evidence_unavailable_fixture_round_trips() -> None:
+    payload = json.loads(
+        (FIXTURES / "runtime_health_evidence_unavailable.json").read_text()
+    )
+    parsed = HealthResponse.from_dict(payload)
+    assert parsed.to_dict() == payload
+
+
 def test_runtime_health_error_fixture_round_trips() -> None:
     payload = json.loads((FIXTURES / "runtime_health_error.json").read_text())
     parsed = HealthResponse.from_dict(payload)
