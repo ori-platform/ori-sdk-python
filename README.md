@@ -1,7 +1,6 @@
 # ori-sdk-python
 
-Python SDK for building integrations with the [Ori runtime](https://github.com/ori-platform/ori-runtime), Gateway consumers,
-and community skill tooling.
+Python SDK for building integrations with the Ori runtime, Gateway consumers, and community skill tooling.
 
 > ## Table of contents
 
@@ -36,8 +35,7 @@ and community skill tooling.
 Ori is made up of several applications that exchange structured health, gateway, skill, telemetry, and firmware data. `ori-sdk-python` provides shared Python models and helpers so those applications interpret the same contracts in the same way.
 
 This SDK mirrors the contracts defined in
-[`ori-specs`](https://github.com/ori-platform/ori-specs) without depending on `ori-runtime`
-internals. It provides typed models, validation, and helper utilities for Ori consumers while leaving runtime policy and action authority to the runtime itself.
+[`ori-specs`](https://github.com/ori-platform/ori-specs) without depending on [`ori-runtime`](https://github.com/ori-platform/ori-runtime) internals. It provides typed models, validation, and helper utilities for Ori consumers while leaving runtime policy and action authority to the runtime itself.
 
 The SDK is a library rather than a standalone application. It includes a read-only Unix socket client for runtime health but does not provide networking, hardware control, database access, or local skill execution.
 
@@ -458,9 +456,9 @@ Do not open a public issue for undisclosed security concerns.
 
 - Ori runtime: [ori-runtime](https://github.com/ori-platform/ori-runtime)
 - Ori specifications: [ori-specs](https://github.com/ori-platform/ori-specs)
-- Runtime health contract: [runtime-health/v1](https://github.com/ori-platform/ori-specs/blob/main/runtime-health/v1.md)
-- Gateway API contract: [gateway-api/v1](https://github.com/ori-platform/ori-specs/blob/main/gateway-api/v1.md)
-- Skill package contract: [skills-package/v1](https://github.com/ori-platform/ori-specs/blob/main/skills-package/v1.md)
+- Ori skills hub: [ori-skills-hub](https://github.com/ori-platform/ori-skills-hub)
+- Ori cli: [ori-cli](https://github.com/ori-platform/ori-cli)
+- Ori gateway: [ori-gateway](https://github.com/ori-platform/ori-gateway)
 
 > ## Status
 
