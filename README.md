@@ -157,12 +157,12 @@ pre-commit install
 
     ```python
     from ori_sdk import (
-    RuntimeHealthClient,
-    runtime_posture_summary,
-    sensor_freshness_delta,
+        RuntimeHealthClient,
+        runtime_posture_summary,
+        sensor_freshness_delta,
     )
+
     response = RuntimeHealthClient().get_health()
-    
     if response.ok and response.health is not None:
         posture = runtime_posture_summary(response.health)
         freshness = sensor_freshness_delta(response.health)
@@ -195,10 +195,10 @@ pre-commit install
 
     | Deployment type | Physical actuation supported | Maximum action tier |
     | --- | ---: | ---: |
-    | `phone` | No | B |
-    | `server` | No | B |
-    | `pi` | Yes | D |
-    | `edge_node` | Yes | D |
+    | `edge_node` | conditional | D |
+    | `phone` | unsupported | B |
+    | `pi` | conditional | D |
+    | `server` | unsupported | None |
 
 - #### Build gateway messages
 
@@ -286,7 +286,7 @@ Before opening a pull request, run the following checks locally.
 - Run a single test file
 
     ```bash
-    pytest -q tests/test_device_config.py::test_deployment_type_from_value
+    pytest -q tests/test_device_config.py
     ```
 
 - Run a single test
