@@ -90,8 +90,8 @@ def test_phone_constraints_match_contract() -> None:
     constraints = deployment_constraints(DeploymentType.PHONE)
 
     assert constraints.deployment_type is DeploymentType.PHONE
-    assert constraints.supports_physical_actuation is False
-    assert constraints.max_action_tier == "B"
+    assert constraints.physical_actuation_support == "unsupported"
+    assert constraints.potential_max_action_tier == "B"
     assert constraints.description
 
 
@@ -99,8 +99,8 @@ def test_server_constraints_match_contract() -> None:
     constraints = deployment_constraints(DeploymentType.SERVER)
 
     assert constraints.deployment_type is DeploymentType.SERVER
-    assert constraints.supports_physical_actuation is False
-    assert constraints.max_action_tier == "B"
+    assert constraints.physical_actuation_support == "unsupported"
+    assert constraints.potential_max_action_tier is None
     assert constraints.description
 
 
@@ -108,8 +108,8 @@ def test_pi_constraints_match_contract() -> None:
     constraints = deployment_constraints(DeploymentType.PI)
 
     assert constraints.deployment_type is DeploymentType.PI
-    assert constraints.supports_physical_actuation is True
-    assert constraints.max_action_tier == "D"
+    assert constraints.physical_actuation_support == "conditional"
+    assert constraints.potential_max_action_tier == "D"
     assert constraints.description
 
 
@@ -117,8 +117,8 @@ def test_edge_node_constraints_match_contract() -> None:
     constraints = deployment_constraints(DeploymentType.EDGE_NODE)
 
     assert constraints.deployment_type is DeploymentType.EDGE_NODE
-    assert constraints.supports_physical_actuation is True
-    assert constraints.max_action_tier == "D"
+    assert constraints.physical_actuation_support == "conditional"
+    assert constraints.potential_max_action_tier == "D"
     assert constraints.description
 
 
@@ -126,7 +126,7 @@ def test_deployment_constraints_are_immutable() -> None:
     constraints = deployment_constraints(DeploymentType.PI)
 
     with pytest.raises(FrozenInstanceError):
-        constraints.max_action_tier = "B"  # type: ignore[misc]
+        constraints.potential_max_action_tier = "B"  # type: ignore[misc]
 
 
 def test_device_config_accepts_valid_deployment_type() -> None:
@@ -184,3 +184,49 @@ def test_health_status_without_deployment_type_fails() -> None:
 
     assert exc.value.code == ORI_SDK_DEPLOYMENT_DATA_UNAVAILABLE
     assert response.health.device_id in exc.value.details
+
+
+def test_pi_constraints_are_conditional_not_current_capability() -> None:
+    constraints = deployment_constraints(DeploymentType.PI)
+
+    assert constraints.physical_actuation_support == "conditional"
+
+
+def test_edge_node_constraints_are_conditional_not_current_capability() -> None:
+    constraints = deployment_constraints(DeploymentType.EDGE_NODE)
+
+    assert constraints.physical_actuation_support == "conditional"
+
+
+def test_server_constraints_do_not_advertise_action_tier() -> None:
+    constraints = deployment_constraints(DeploymentType.SERVER)
+
+    assert constraints.potential_max_action_tier is None
+
+
+def test_physical_actuation_support_partition() -> None:
+    unsupported = {
+        dt
+        for dt in DeploymentType
+        if deployment_constraints(dt).physical_actuation_support == "unsupported"
+    }
+    conditional = {
+        dt
+        for dt in DeploymentType
+        if deployment_constraints(dt).physical_actuation_support == "conditional"
+    }
+    assert unsupported == {DeploymentType.PHONE, DeploymentType.SERVER}
+    assert conditional == {DeploymentType.PI, DeploymentType.EDGE_NODE}
+
+
+def test_only_server_has_unasserted_action_tier_ceiling() -> None:
+    unasserted = {
+        dt
+        for dt in DeploymentType
+        if deployment_constraints(dt).potential_max_action_tier is None
+    }
+    assert unasserted == {DeploymentType.SERVER}
+
+
+def test_deployment_type_has_exactly_four_values() -> None:
+    assert {m.value for m in DeploymentType} == {"pi", "phone", "edge_node", "server"}
