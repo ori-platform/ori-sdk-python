@@ -3,7 +3,14 @@
 
 """Public package surface for ori-sdk-python."""
 
+from ori_sdk.device_config import (
+    DeploymentConstraints,
+    DeploymentType,
+    DeviceConfig,
+    deployment_constraints,
+)
 from ori_sdk.errors import (
+    DeviceConfigError,
     GatewayContractError,
     HealthClientError,
     OriSDKError,
@@ -164,7 +171,13 @@ from ori_sdk.telemetry import (
 from ori_sdk.validation import validate_skill_metadata, validate_skill_metadata_file
 
 __all__ = [
+    # device config
+    "DeploymentConstraints",
+    "DeploymentType",
+    "DeviceConfig",
+    "deployment_constraints",
     # errors
+    "DeviceConfigError",
     "GatewayContractError",
     "HealthClientError",
     "OriSDKError",
