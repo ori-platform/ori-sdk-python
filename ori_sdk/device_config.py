@@ -63,14 +63,18 @@ _CONSTRAINTS: dict[DeploymentType, DeploymentConstraints] = {
         deployment_type=DeploymentType.PI,
         supports_physical_actuation=True,
         max_action_tier="D",
-        description=("Raspberry Pi deployment. Supports GPIO and relay hardware."),
+        description=(
+            "Raspberry Pi deployment. Can support GPIO and relay hardware when "
+            "configured and reported available by runtime health."
+        ),
     ),
     DeploymentType.EDGE_NODE: DeploymentConstraints(
         deployment_type=DeploymentType.EDGE_NODE,
         supports_physical_actuation=True,
         max_action_tier="D",
         description=(
-            "Dedicated Ori edge hardware deployment. Supports GPIO and relay hardware."
+            "Dedicated Ori edge hardware deployment. Can support the hardened "
+            "hardware path when configured and reported available by runtime health."
         ),
     ),
     DeploymentType.SERVER: DeploymentConstraints(
