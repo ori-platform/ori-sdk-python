@@ -12,6 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from typing import Literal
 
 from ori_sdk.errors import (
     ORI_SDK_DEPLOYMENT_DATA_UNAVAILABLE,
@@ -44,50 +45,57 @@ class DeploymentType(Enum):
 
 @dataclass(frozen=True, slots=True)
 class DeploymentConstraints:
-    """Contract-level authority ceiling for a deployment class."""
+    """Static deployment characteristics defined by the runtime contract."""
 
     deployment_type: DeploymentType
-    supports_physical_actuation: bool
-    max_action_tier: ActionTier
+    physical_actuation_support: Literal["unsupported", "conditional"]
+    potential_max_action_tier: ActionTier | None
     description: str
 
 
 _CONSTRAINTS: dict[DeploymentType, DeploymentConstraints] = {
     DeploymentType.PHONE: DeploymentConstraints(
         deployment_type=DeploymentType.PHONE,
-        supports_physical_actuation=False,
-        max_action_tier="B",
-        description=("Android phone deployment. No GPIO or relay hardware support."),
+        physical_actuation_support="unsupported",
+        potential_max_action_tier="B",
+        description=(
+            "Android runtime-mobile deployment. No GPIO or relay hardware path; "
+            "it must not advertise Tier C or Tier D physical actuation."
+        ),
     ),
     DeploymentType.PI: DeploymentConstraints(
         deployment_type=DeploymentType.PI,
-        supports_physical_actuation=True,
-        max_action_tier="D",
+        physical_actuation_support="conditional",
+        potential_max_action_tier="D",
         description=(
-            "Raspberry Pi deployment. Can support GPIO and relay hardware when "
-            "configured and reported available by runtime health."
+            "Raspberry Pi deployment. GPIO and relay support depend on runtime "
+            "configuration and health/capability posture."
         ),
     ),
     DeploymentType.EDGE_NODE: DeploymentConstraints(
         deployment_type=DeploymentType.EDGE_NODE,
-        supports_physical_actuation=True,
-        max_action_tier="D",
+        physical_actuation_support="conditional",
+        potential_max_action_tier="D",
         description=(
-            "Dedicated Ori edge hardware deployment. Can support the hardened "
-            "hardware path when configured and reported available by runtime health."
+            "Dedicated Ori edge-node deployment. Physical actuation support "
+            "depends on runtime configuration and health posture."
         ),
     ),
     DeploymentType.SERVER: DeploymentConstraints(
         deployment_type=DeploymentType.SERVER,
-        supports_physical_actuation=False,
-        max_action_tier="B",
-        description=("Server deployment. No GPIO or relay hardware support."),
+        physical_actuation_support="unsupported",
+        potential_max_action_tier=None,
+        description=(
+            "Server deployment. No implied GPIO or relay hardware path. "
+            "The contract does not define an overall action-tier ceiling for "
+            "this deployment class."
+        ),
     ),
 }
 
 
 def deployment_constraints(deployment_type: DeploymentType) -> DeploymentConstraints:
-    """Return the contract-level authority ceiling for a deployment class."""
+    """Return the static characteristics for a deployment class."""
     return _CONSTRAINTS[deployment_type]
 
 
