@@ -142,7 +142,7 @@ pip install -e ".[dev]"
 pre-commit install
 ```
 
-**Requirements**
+**<u>Requirements</u>**
 
 - Python 3.11 or 3.12
 - `pip`
@@ -275,7 +275,7 @@ networking, or hardware dependencies.
 
 Before opening a pull request, run the following checks locally.
 
-### Tests
+#### **<u>Tests</u>**
 
 - Run the full test suite
 
@@ -295,7 +295,7 @@ Before opening a pull request, run the following checks locally.
     pytest -q tests/test_device_config.py::test_deployment_type_from_value
     ```
 
-### Code quality
+#### **<u>Code quality</u>**
 
 - Run Ruff for linting
 
@@ -315,7 +315,7 @@ Before opening a pull request, run the following checks locally.
     mypy ori_sdk tests
     ```
 
-### Repository checks
+#### **<u>Repository checks</u>**
 
 - Run pre-commit hooks
 
@@ -373,13 +373,13 @@ Before contributing, read:
 3. [`AGENTS.md`](AGENTS.md)
 4. [`SECURITY.md`](SECURITY.md)
 
-### Contribution rules
+#### **<u>Contribution rules</u>**
 
-Before opening a pull request, ensure that:
+Before opening a pull request, ensure that you:
 
 - Add only fields and semantics defined by the relevant Ori contract (`ori-specs`).
 - Do not import `ori-runtime` internals.
-- Keep public APIs fully typed; avoid public `Any` types.
+- Keep public APIs fully typed. Avoid public `Any` types.
 - Use typed SDK errors at public API boundaries.
 - Do not expose raw socket or parsing errors.
 - Preserve gateway request/response correlation IDs throughout the request lifecycle.
@@ -390,7 +390,7 @@ Before opening a pull request, ensure that:
 - Workflow changes must pass `scripts/check_workflows.py`.
 - All local verification commands must pass.
 
-### Recommended contribution workflow
+#### **<u>Recommended contribution workflow</u>**
 
 1. Create a feature branch:
 
@@ -424,19 +424,11 @@ Before opening a pull request, ensure that:
 
 Common commit types include:
 
-```text
-feat
-fix
-docs
-test
-refactor
-perf
-build
-ci
-chore
-revert
-security
-```
+| | | | |
+| ------------------------ | --- | --- | --- |
+| `feat` | `build` | `fix` | `revert` |
+| `docs` | `chore` | `test` | `security` |
+| `ci` | `perf` | `refactor` | |
 
 Contributions that improve reliability, usability, and contract compatibility are welcome.
 
