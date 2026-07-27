@@ -58,7 +58,7 @@ The `0.1.x` release includes:
 - Read-only health diagnostic helpers.
 - Deployment-aware configuration models for CLI and Gateway consumers.
 - Immutable skill package models and validation.
-- Gateway topics, payload models, and response-correlation helpers.
+- Gateway topics, payload models, response correlation, and request lifecycle helpers.
 - Runtime telemetry models, canonical JSON serialization, and HMAC helpers.
 - Ed25519 signing and verification helpers for artifacts and skill manifests.
 - Firmware Layer 1 capability, telemetry, heartbeat, fault, and freshness models.
@@ -219,6 +219,38 @@ pre-commit install
 
     print(export_request_topic(request.device_id), request.to_dict())
     ```
+
+    `GatewaySession` adds deterministic retry and timeout state around an
+    already-validated request. Correlation is a non-raising routing predicate;
+    use the existing family-specific validators afterward to enforce the full
+    response contract.
+
+    ```python
+    from ori_sdk import (
+        ActiveSessionRegistry,
+        GatewayRetryPolicy,
+        GatewaySession,
+    )
+
+    session = GatewaySession(
+        request,
+        GatewayRetryPolicy(timeout_ms=10_000, max_retries=1),
+    )
+    sessions = ActiveSessionRegistry()
+    sessions.register(session)
+
+    # After the current attempt times out, this preserves request_id and
+    # starts a fresh per-attempt deadline.
+    retried = sessions.retry(session.request_id)
+    ```
+
+    Reasoning and Tier C sessions use the timeout carried by their request
+    envelope. Runtime export requests have no timeout field, so export sessions
+    use `GatewayRetryPolicy.timeout_ms`. The registry is thread-safe for
+    synchronous callers and does not perform MQTT I/O, payload parsing, or
+    response validation. `GatewaySession.ensure_active()` raises the typed
+    timeout error, while `next_attempt()` and `ActiveSessionRegistry.retry()`
+    raise the typed exhaustion error after the retry policy is spent.
 
 - #### Build runtime telemetry
 
@@ -461,7 +493,7 @@ The current release provides:
 
 - Runtime-health contract models and local health communication.
 - Deployment-aware configuration models for CLI and Gateway consumers.
-- Gateway contract models and request/response validation helpers.
+- Gateway contract models, request lifecycle, and response validation helpers.
 - Skill-package models, validation, and signing helpers.
 - Runtime telemetry models and canonical serialization helpers.
 - Firmware telemetry capability and verification models.
