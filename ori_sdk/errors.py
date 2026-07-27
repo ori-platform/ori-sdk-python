@@ -38,6 +38,10 @@ ORI_SDK_BUNDLED_SIGNATURE_NOT_ALLOWED = "ORI-SDK-036"
 ORI_SDK_INVALID_MANIFEST = "ORI-SDK-037"
 ORI_SDK_INVALID_PRIVATE_KEY = "ORI-SDK-038"
 
+# ── Device config error codes (ORI-SDK-04x) ───────────────────────────────────
+ORI_SDK_UNKNOWN_DEPLOYMENT_TYPE = "ORI-SDK-040"
+ORI_SDK_DEPLOYMENT_DATA_UNAVAILABLE = "ORI-SDK-041"
+
 
 class OriSDKError(Exception):
     """Base class for all ori-sdk-python errors.
@@ -69,3 +73,7 @@ class GatewayContractError(OriSDKError):
 
 class SkillSigningError(OriSDKError):
     """Raised when skill signing input or verification fails closed."""
+
+
+class DeviceConfigError(OriSDKError):
+    """Raised for deployment-type parsing or derivation failures."""
