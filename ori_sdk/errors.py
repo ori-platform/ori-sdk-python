@@ -26,6 +26,11 @@ ORI_SDK_REQUEST_ID_MISMATCH = "ORI-SDK-020"
 ORI_SDK_PROPOSAL_ID_MISMATCH = "ORI-SDK-021"
 ORI_SDK_DEVICE_ID_MISMATCH = "ORI-SDK-022"
 ORI_SDK_EXPORT_TYPE_MISMATCH = "ORI-SDK-023"
+ORI_SDK_GATEWAY_SESSION_TIMEOUT = "ORI-SDK-024"
+ORI_SDK_GATEWAY_SESSION_EXHAUSTED = "ORI-SDK-025"
+ORI_SDK_GATEWAY_SESSION_DUPLICATE = "ORI-SDK-026"
+ORI_SDK_GATEWAY_SESSION_NOT_FOUND = "ORI-SDK-027"
+ORI_SDK_GATEWAY_SESSION_INVALID = "ORI-SDK-028"
 
 # ── Skill signing error codes (ORI-SDK-03x) ──────────────────────────────────
 ORI_SDK_CRYPTO_UNAVAILABLE = "ORI-SDK-030"
@@ -69,6 +74,10 @@ class SkillMetadataValidationError(OriSDKError):
 
 class GatewayContractError(OriSDKError):
     """Raised when a gateway response violates the request/response contract."""
+
+
+class GatewaySessionError(OriSDKError):
+    """Raised when a gateway request session cannot complete its lifecycle."""
 
 
 class SkillSigningError(OriSDKError):
