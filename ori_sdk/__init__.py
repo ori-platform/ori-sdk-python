@@ -3,6 +3,7 @@
 
 """Public package surface for ori-sdk-python."""
 
+from ori_sdk.decorators import Agent, action, when
 from ori_sdk.device_config import (
     DeploymentConstraints,
     DeploymentType,
@@ -184,6 +185,10 @@ __all__ = [
     "DeploymentType",
     "DeviceConfig",
     "deployment_constraints",
+    # decorator authoring
+    "Agent",
+    "action",
+    "when",
     # errors
     "DeviceConfigError",
     "GatewayContractError",
