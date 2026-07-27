@@ -192,5 +192,15 @@ class GatewayRetryPolicy:
     timeout_ms: int = 10_000
     max_retries: int = 1
 
+    def __post_init__(self) -> None:
+        if isinstance(self.timeout_ms, bool) or not isinstance(self.timeout_ms, int):
+            raise ValueError("timeout_ms must be an integer")
+        if self.timeout_ms <= 0:
+            raise ValueError("timeout_ms must be positive")
+        if isinstance(self.max_retries, bool) or not isinstance(self.max_retries, int):
+            raise ValueError("max_retries must be an integer")
+        if self.max_retries < 0:
+            raise ValueError("max_retries must be >= 0")
+
     def total_attempts(self) -> int:
         return self.max_retries + 1

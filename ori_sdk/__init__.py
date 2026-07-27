@@ -12,6 +12,7 @@ from ori_sdk.device_config import (
 from ori_sdk.errors import (
     DeviceConfigError,
     GatewayContractError,
+    GatewaySessionError,
     HealthClientError,
     OriSDKError,
     SkillMetadataValidationError,
@@ -98,6 +99,13 @@ from ori_sdk.gateway_models import (
     TierCEnrichmentRequest,
     TierCEnrichmentResponse,
 )
+from ori_sdk.gateway_session import (
+    ActiveSessionRegistry,
+    GatewaySession,
+    GatewaySessionFamily,
+    GatewaySessionRequest,
+    GatewaySessionResponse,
+)
 from ori_sdk.health import RuntimeHealthClient
 from ori_sdk.helpers import (
     AlertChannelSummary,
@@ -179,6 +187,7 @@ __all__ = [
     # errors
     "DeviceConfigError",
     "GatewayContractError",
+    "GatewaySessionError",
     "HealthClientError",
     "OriSDKError",
     "SkillMetadataValidationError",
@@ -248,6 +257,12 @@ __all__ = [
     "validate_export_response",
     "validate_response",
     "validate_tier_c_enrichment_response",
+    # gateway sessions
+    "ActiveSessionRegistry",
+    "GatewaySession",
+    "GatewaySessionFamily",
+    "GatewaySessionRequest",
+    "GatewaySessionResponse",
     # gateway models
     "ExportType",
     "JsonObject",
