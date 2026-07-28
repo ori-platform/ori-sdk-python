@@ -200,9 +200,11 @@ pre-commit install
         sensors_required=(SensorRequirement(type="current_clamp"),),
     )
 
+
     @agent.action(tier="A")
     def alert_operator() -> None:
         pass
+
 
     @agent.when(
         "value > 20",
@@ -213,6 +215,7 @@ pre-commit install
     )
     def high_usage() -> None:
         pass
+
 
     package = agent.compile()
     ```
