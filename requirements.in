@@ -1,2 +1,2 @@
-cryptography>=48.0.1,<49
+cryptography>=48.0.1,<50
 pyyaml>=6.0.1
