@@ -12,6 +12,7 @@ Python SDK for building integrations with the Ori runtime, Gateway consumers, an
 - [Using the SDK](#using-the-sdk)
   - [Read runtime health](#read-runtime-health)
   - [Validate skill packages](#validate-skill-packages)
+  - [Author skill packages with decorators](#author-skill-packages-with-decorators)
   - [Describe deployments](#describe-deployments)
   - [Build gateway messages](#build-gateway-messages)
   - [Build runtime telemetry](#build-runtime-telemetry)
@@ -58,6 +59,7 @@ The `0.1.x` release includes:
 - Read-only health diagnostic helpers.
 - Deployment-aware configuration models for CLI and Gateway consumers.
 - Immutable skill package models and validation.
+- Decorator-based skill-package authoring through the same v1 normaliser.
 - Gateway topics, payload models, response correlation, and request lifecycle helpers.
 - Runtime telemetry models, canonical JSON serialization, and HMAC helpers.
 - Ed25519 signing and verification helpers for artifacts and skill manifests.
@@ -70,7 +72,6 @@ The following are intentionally out of scope:
 - Local skill execution.
 - MQTT or HTTP clients.
 - Database persistence.
-- Decorator-based skill authoring.
 
 > ## Technologies
 
@@ -181,6 +182,52 @@ pre-commit install
         )
         print(package.name, package.triggers[0].action_tier)
     ```
+
+- #### Author skill packages with decorators
+
+    The decorator API provides a Python authoring surface for the same
+    `skills-package/v1` document produced by YAML. Decorated functions are
+    metadata declarations only: the SDK does not execute them, inspect their
+    source, or package their code.
+
+    ```python
+    from ori_sdk import Agent, SensorRequirement
+
+    agent = Agent(
+        name="energy-guard",
+        version="1.0.0",
+        author="ori",
+        sensors_required=(SensorRequirement(type="current_clamp"),),
+    )
+
+    @agent.action(tier="A")
+    def alert_operator() -> None:
+        pass
+
+    @agent.when(
+        "value > 20",
+        tier="A",
+        actions=("alert_operator",),
+        escalate_to="gateway",
+        prompt="Current draw is {value}{unit}.",
+    )
+    def high_usage() -> None:
+        pass
+
+    package = agent.compile()
+    ```
+
+    The exported `action(agent, ...)` and `when(agent, ...)` functions provide
+    the same behavior when module-level decorators are preferable.
+
+    Conditions must be explicit strings; callable and lambda source is never
+    serialized. Every trigger requires `tier`. Physical Tier B declarations
+    must select approval or `reasoning_policy="post_action"`, Tier C requires
+    an explicit `safe_default_action`, and Tier D is always rule-only with no
+    prompt. `Agent.compile()` delegates final validation to
+    `SkillYamlNormaliser`, so the decorator API cannot bypass YAML-equivalent
+    safety checks. Cloud reasoning is represented by `escalate_to="gateway"`;
+    the legacy `cloud` value is rejected.
 
 - #### Describe deployments
 
