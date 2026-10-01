@@ -1,0 +1,30 @@
+# Ori SDK (Python) — CODEOWNERS
+#
+# The SDK signs and verifies skill packages and mirrors runtime contracts.
+# Default every path to maintainer review, then keep explicit sections for
+# clarity.
+#
+# Reference:
+# https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# ── Default owner (no unowned paths) ──────────────────────────────────────────
+* @AdeGneus
+
+# ── SDK core (signing, validation, contract mirrors) ─────────────────────────
+/ori_sdk/ @AdeGneus
+/tests/ @AdeGneus
+
+# ── Build + dependency supply chain ───────────────────────────────────────────
+/pyproject.toml @AdeGneus
+/requirements*.in @AdeGneus
+/requirements*.txt @AdeGneus
+
+# ── Policy docs ───────────────────────────────────────────────────────────────
+/AGENTS.md @AdeGneus
+/PRINCIPLES.md @AdeGneus
+/README.md @AdeGneus
+/SECURITY.md @AdeGneus
+
+# ── CI / governance / automation ──────────────────────────────────────────────
+/.github/ @AdeGneus
+/scripts/ @AdeGneus
